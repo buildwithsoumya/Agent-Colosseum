@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* white / black / purple — purple is an accent, not a flood */
+  --color-ink: #0a0a0a;
+  --color-ink-soft: #52525b;
+  --color-line: #e4e4e7;
+  --color-paper: #ffffff;
+  --color-paper-dim: #fafafa;
+  --color-accent: #6d28d9; /* violet-700 */
+  --color-accent-strong: #5b21b6;
+  --color-accent-soft: #f3efff;
+  --color-good: #15803d;
+  --color-bad: #b91c1c;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+/* thin elegant scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d8 transparent;
+}
