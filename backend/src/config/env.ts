@@ -3,6 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 
 // Minimal .env loader so the repo runs without extra deps (compose/dev/CI all pass real env).
+// Walks up from cwd so it works whether run from repo root or a workspace package.
 function loadDotEnv(file: string): void {
   if (!fs.existsSync(file)) return;
   for (const line of fs.readFileSync(file, "utf8").split("\n")) {
@@ -17,8 +18,9 @@ function loadDotEnv(file: string): void {
   }
 }
 
-loadDotEnv(path.resolve(process.cwd(), "../../.env")); // monorepo root when run via workspace scripts
-loadDotEnv(path.resolve(process.cwd(), ".env"));
+for (const candidate of ["./.env", "../.env", "../../.env"]) {
+  loadDotEnv(path.resolve(process.cwd(), candidate));
+}
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
