@@ -1,7 +1,8 @@
 import { Worker } from "bullmq";
 import { PrismaClient } from "@prisma/client";
 import { GameConfigSchema, SocketEvent } from "@ac/shared";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
+import type { TestCase } from "./types.js";
 
 const prisma = new PrismaClient();
 const redis = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379", { maxRetriesPerRequest: null });
