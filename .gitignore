@@ -31,3 +31,7 @@ blob-report/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# playwright local artifacts
+test-results/
+playwright-report/

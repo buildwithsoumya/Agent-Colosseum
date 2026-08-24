@@ -1,0 +1,131 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useSession } from "@/lib/session";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SectionLabel } from "@/components/ui/typography";
+
+const DEMO_ACCOUNTS = [
+  ["Admin", "admin@colosseum.dev"],
+  ["Mentor", "mentor.fintech@colosseum.dev"],
+  ["Captain", "captain.prime@colosseum.dev"],
+];
+
+export default function LoginPage() {
+  const { login, register } = useSession();
+  const router = useRouter();
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      if (mode === "login") {
+        const user = await login(email, password);
+        router.push(user.role === "ADMIN" ? "/admin" : user.role === "MENTOR" ? "/mentor" : "/app");
+      } else {
+        await register(name, email, password);
+        router.push("/app/team");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function quickFill(demoEmail: string) {
+    setMode("login");
+    setEmail(demoEmail);
+    setPassword("password123");
+  }
+
+  return (
+    <div className="grid min-h-screen lg:grid-cols-2">
+      <div className="flex items-center justify-center px-4 py-16 sm:px-10">
+        <div className="w-full max-w-sm">
+          <Link href="/" className="mb-10 flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-md bg-ink text-[13px] font-black text-white">A</span>
+            <span className="text-sm font-bold tracking-tight">
+              Agent<span className="text-accent">Colosseum</span>
+            </span>
+          </Link>
+
+          <h1 className="text-2xl font-bold tracking-tight">
+            {mode === "login" ? "Enter the arena" : "Join the roster"}
+          </h1>
+          <p className="mt-1.5 text-[13px] text-ink-soft">
+            {mode === "login"
+              ? "Log in to your team or event staff account."
+              : "Create a participant account — you can form a team next."}
+          </p>
+
+          <form onSubmit={submit} className="mt-8 space-y-3.5">
+            {mode === "register" && (
+              <Input placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} />
+            )}
+            <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+            <Input type="password" placeholder="Password (min 8 characters)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete={mode === "login" ? "current-password" : "new-password"} />
+            {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-bad">{error}</p>}
+            <Button type="submit" disabled={busy} className="w-full bg-accent hover:bg-accent-strong">
+              {busy ? "…" : mode === "login" ? "Log in" : "Create account"}
+            </Button>
+          </form>
+
+          <p className="mt-4 text-center text-xs text-ink-soft">
+            {mode === "login" ? (
+              <>
+                No account?{" "}
+                <button onClick={() => setMode("register")} className="font-semibold text-accent hover:text-accent-strong">
+                  Register
+                </button>
+              </>
+            ) : (
+              <>
+                Already registered?{" "}
+                <button onClick={() => setMode("login")} className="font-semibold text-accent hover:text-accent-strong">
+                  Log in
+                </button>
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+
+      <div className="hidden flex-col justify-center border-l border-line bg-paper-dim px-10 lg:flex">
+        <SectionLabel>Demo access</SectionLabel>
+        <h2 className="mt-3 max-w-md text-2xl font-bold leading-tight tracking-tight">
+          Explore every role of the platform.
+        </h2>
+        <p className="mt-3 max-w-md text-sm leading-relaxed text-ink-soft">
+          The development seed ships accounts for each role. Password for all demo accounts is{" "}
+          <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs">password123</code>.
+        </p>
+        <div className="mt-6 max-w-md space-y-2">
+          {DEMO_ACCOUNTS.map(([role, mail]) => (
+            <button
+              key={mail}
+              onClick={() => quickFill(mail)}
+              className="flex w-full items-center justify-between rounded-xl border border-line bg-white px-4 py-3 text-left transition-colors hover:border-violet-300"
+            >
+              <span className="text-sm font-semibold">{role}</span>
+              <span className="font-mono text-xs text-ink-soft">{mail}</span>
+            </button>
+          ))}
+          <p className="pt-1 text-[11px] text-neutral-400">
+            Spectator view needs no login: /spectator
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
