@@ -39,12 +39,25 @@ const EnvSchema = z.object({
   EVALUATOR_QUEUE_NAME: z.string().default("gauntlet"),
 });
 
-const parsed = EnvSchema.safeParse(process.env);
-if (!parsed.success) {
+const testDefaults = {
+  DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder",
+  AUTH_SECRET: "test-only-secret-not-used-for-real-sessions",
+};
+
+function loadEnv(): z.infer<typeof EnvSchema> {
+  const parsed = EnvSchema.safeParse(process.env);
+  if (parsed.success) return parsed.data;
+
+  if (process.env.NODE_ENV === "test" || process.env.VITEST) {
+    // Unit tests import modules that read env; keep them loadable without live config.
+    // DB-backed tests are gated behind RUN_DB_TESTS and provide their own DATABASE_URL.
+    return EnvSchema.parse({ ...process.env, ...testDefaults });
+  }
+
   // eslint-disable-next-line no-console
   console.error("Invalid environment configuration:", parsed.error.flatten().fieldErrors);
   process.exit(1);
 }
 
-export const env = parsed.data;
+export const env = loadEnv();
 export const isProd = env.NODE_ENV === "production";
