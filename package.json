@@ -1,0 +1,27 @@
+{
+  "name": "agent-colosseum",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent Colosseum — gamified AI agent hackathon event platform (full-stack demo)",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @ac/backend dev & pnpm --filter @ac/frontend dev & wait",
+    "dev:frontend": "pnpm --filter @ac/frontend dev",
+    "dev:backend": "pnpm --filter @ac/backend dev",
+    "dev:evaluator": "pnpm --filter @ac/evaluator dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:e2e": "playwright test",
+    "db:migrate": "pnpm --filter @ac/backend db:migrate",
+    "db:generate": "pnpm --filter @ac/backend db:generate",
+    "db:seed": "pnpm --filter @ac/backend db:seed",
+    "db:studio": "pnpm --filter @ac/backend db:studio",
+    "infra:up": "docker compose up -d postgres redis",
+    "infra:down": "docker compose down"
+  }
+}
