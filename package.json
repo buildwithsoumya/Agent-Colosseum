@@ -2,7 +2,7 @@
   "name": "agent-colosseum",
   "version": "0.1.0",
   "private": true,
-  "description": "Agent Colosseum — gamified AI agent hackathon event platform (full-stack demo)",
+  "description": "Agent Colosseum \u2014 gamified AI agent hackathon event platform (full-stack demo)",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=20"
@@ -23,5 +23,8 @@
     "db:studio": "pnpm --filter @ac/backend db:studio",
     "infra:up": "docker compose up -d postgres redis",
     "infra:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1"
   }
 }
