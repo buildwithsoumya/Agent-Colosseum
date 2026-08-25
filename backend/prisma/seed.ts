@@ -162,15 +162,19 @@ async function main() {
 
   // ---------------------------------------------------------------- users
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
-  const upsertUser = (email: string, name: string, role: "ADMIN" | "MENTOR" | "PARTICIPANT" | "SPECTATOR") =>
+  const upsertUser = (
+    email: string,
+    name: string,
+    globalRole: "ADMIN" | "MENTOR" | "PARTICIPANT",
+  ) =>
     prisma.user.upsert({
       where: { email },
-      update: { role },
-      create: { email, name, role, passwordHash },
+      update: { globalRole }, // never duplicates; role changes here are deliberate demo provisioning
+      create: { email, name, globalRole, passwordHash, status: "ACTIVE" },
     });
 
   const admin = await upsertUser("admin@colosseum.dev", "Admin Controller", "ADMIN");
-  await upsertUser("mc@colosseum.dev", "Lead Stage Host", "SPECTATOR");
+  // stage host needs no account — the /spectator display is public
   const mentorFintech = await upsertUser("mentor.fintech@colosseum.dev", "Mara (FinTech Mentor)", "MENTOR");
   const mentorCybersec = await upsertUser("mentor.cybersec@colosseum.dev", "Chen (CyberSec Mentor)", "MENTOR");
 
@@ -329,12 +333,11 @@ async function main() {
     }
     for (const [i, [email, name]] of spec.members.entries()) {
       const u = await upsertUser(email, name, "PARTICIPANT");
-      const existingMember = await prisma.teamMember.findUnique({ where: { userId: u.id } });
-      if (!existingMember) {
-        await prisma.teamMember.create({
-          data: { teamId: team!.id, userId: u.id, isCaptain: i === 0 },
-        });
-      }
+      await prisma.teamMember.upsert({
+        where: { teamId_userId: { teamId: team!.id, userId: u.id } },
+        update: {}, // idempotent — do not touch existing roles on re-seed
+        create: { teamId: team!.id, userId: u.id, teamRole: i === 0 ? "CAPTAIN" : "MEMBER" },
+      });
     }
     if (spec.trackKey) {
       const track = await prisma.track.findUniqueOrThrow({ where: { key: spec.trackKey } });
@@ -362,7 +365,7 @@ async function main() {
   console.log("Seed complete.");
   console.log(`  Admin:     ${admin.email} / ${DEMO_PASSWORD}`);
   console.log(`  Mentors:   ${mentorFintech.email}, ${mentorCybersec.email} / ${DEMO_PASSWORD}`);
-  console.log("  Captains:  captain.prime@colosseum.dev, captain.null@colosseum.dev, captain.over@colosseum.dev, captain.chaos@colosseum.dev");
+  console.log("  Captains:  captain.prime@colosseum.dev, captain.null@colosseum.dev, captain.over@colosseum.dev, captain.chaos@colosseum.dev (teamRole=CAPTAIN)");
   console.log(`  Password for all demo accounts: ${DEMO_PASSWORD}`);
   console.log(`  Default phase durations: ${Object.values(PHASE_META).map((p) => p.defaultMinutes).join("/")} min`);
 }

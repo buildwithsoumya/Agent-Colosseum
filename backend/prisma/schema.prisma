@@ -12,24 +12,30 @@ datasource db {
 
 // ---------------------------------------------------------------- users/auth
 
-enum Role {
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  globalRole   GlobalRole   @default(PARTICIPANT)
+  status       UserStatus   @default(ACTIVE)
+  trackId      String? // mentor domain assignment
+  track        Track?       @relation(fields: [trackId], references: [id])
+  createdAt    DateTime     @default(now())
+  sessions     Session[]
+  memberships  TeamMember[]
+  invitations  Invitation[] @relation("InvitedUser")
+}
+
+enum GlobalRole {
   ADMIN
   MENTOR
   PARTICIPANT
-  SPECTATOR
 }
 
-model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  name         String
-  passwordHash String
-  role         Role      @default(PARTICIPANT)
-  trackId      String?   // mentor domain assignment
-  track        Track?    @relation(fields: [trackId], references: [id])
-  createdAt    DateTime  @default(now())
-  sessions     Session[]
-  memberships  TeamMember[]
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
 }
 
 model Session {
@@ -43,17 +49,53 @@ model Session {
   @@index([userId])
 }
 
+// ------------------------------------------------------------------ invites
+
+/**
+ * Single-use, expiring, hashed-token invitations for privileged roles.
+ * ADMIN is deliberately NOT invitable through this mechanism.
+ */
+model Invitation {
+  id           String          @id @default(cuid())
+  tokenHash    String          @unique // sha256 of the raw token; raw token never stored
+  email        String
+  role         InvitableRole
+  teamId       String? // required when role = CAPTAIN
+  team         Team?           @relation(fields: [teamId], references: [id])
+  status       InvitationState @default(PENDING)
+  expiresAt    DateTime
+  usedAt       DateTime?
+  usedByUserId String?
+  usedByUser   User?           @relation("InvitedUser", fields: [usedByUserId], references: [id])
+  createdById  String?
+  createdAt    DateTime        @default(now())
+
+  @@index([email])
+}
+
+enum InvitableRole {
+  MENTOR
+  CAPTAIN
+}
+
+enum InvitationState {
+  PENDING
+  USED
+  EXPIRED
+  REVOKED
+}
+
 // ---------------------------------------------------------------- teams
 
 model Team {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  code          String   @unique // invite code
-  trackId       String?
-  track         Track?   @relation(fields: [trackId], references: [id])
-  creditBalance Int      @default(0) // cache, always written with CreditTransaction inside a DB tx
+  id                           String   @id @default(cuid())
+  name                         String   @unique
+  code                         String   @unique // invite code
+  trackId                      String?
+  track                        Track?   @relation(fields: [trackId], references: [id])
+  creditBalance                Int      @default(0) // cache, always written with CreditTransaction inside a DB tx
   balanceSnapshotAtCasinoClose Int? // B for credit discipline, captured when PHASE_3 closes
-  createdAt     DateTime @default(now())
+  createdAt                    DateTime @default(now())
 
   members           TeamMember[]
   problemStatements ProblemStatement[]
@@ -65,17 +107,23 @@ model Team {
   submissions       Submission[]
   scores            Score?
   leaderboardEntry  LeaderboardEntry?
+  invitations       Invitation[]
 }
 
 model TeamMember {
-  teamId    String
-  team      Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  userId    String  @unique
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isCaptain Boolean @default(false)
-  joinedAt  DateTime @default(now())
+  teamId   String
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId   String   @unique
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamRole TeamRole @default(MEMBER)
+  joinedAt DateTime @default(now())
 
   @@id([teamId, userId])
+}
+
+enum TeamRole {
+  MEMBER
+  CAPTAIN
 }
 
 // ---------------------------------------------------------------- event engine
@@ -99,8 +147,8 @@ model Event {
   startedAt      DateTime?
   endedAt        DateTime?
 
-  phaseRuns      PhaseRun[]
-  announcements  Announcement[]
+  phaseRuns     PhaseRun[]
+  announcements Announcement[]
 }
 
 enum Phase {
@@ -114,13 +162,13 @@ enum Phase {
 
 // Immutable history of phase transitions (auditability)
 model PhaseRun {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
   phase     Phase
   startedAt DateTime
   endedAt   DateTime?
-  auto      Boolean  @default(false) // advanced by timer vs by admin
+  auto      Boolean   @default(false) // advanced by timer vs by admin
 
   @@index([eventId])
 }
@@ -134,21 +182,21 @@ model Track {
   description String
   active      Boolean @default(true)
 
-  task1Title    String
-  task1Body     String
-  task1Criteria Json // string[] acceptance criteria
-  task1UnlockCost Int   @default(40)
-  task2Title    String
-  task2Body     String
-  task2Criteria Json
+  task1Title      String
+  task1Body       String
+  task1Criteria   Json // string[] acceptance criteria
+  task1UnlockCost Int    @default(40)
+  task2Title      String
+  task2Body       String
+  task2Criteria   Json
   chaosConditions Json // string[] chaos injected during task 2
 
-  users              User[]
-  teams              Team[]
-  problemStatements  ProblemStatement[]
-  tasks              Task[]
-  features           Feature[]
-  gauntletPayloads   GauntletPayload[]
+  users             User[]
+  teams             Team[]
+  problemStatements ProblemStatement[]
+  tasks             Task[]
+  features          Feature[]
+  gauntletPayloads  GauntletPayload[]
 }
 
 enum TaskState {
@@ -160,15 +208,15 @@ enum TaskState {
 }
 
 model Task {
-  id          String    @id @default(cuid())
-  trackId     String
-  track       Track     @relation(fields: [trackId], references: [id], onDelete: Cascade)
-  number      TaskNumber
-  title       String
-  body        String
-  criteria    Json
-  state       TaskState @default(LOCKED)
-  revealedAt  DateTime?
+  id         String     @id @default(cuid())
+  trackId    String
+  track      Track      @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  number     TaskNumber
+  title      String
+  body       String
+  criteria   Json
+  state      TaskState  @default(LOCKED)
+  revealedAt DateTime?
 
   unlocks TaskUnlock[]
 
@@ -204,20 +252,20 @@ enum ProblemStatementStatus {
 }
 
 model ProblemStatement {
-  id        String                 @id @default(cuid())
-  teamId    String
-  team      Team                   @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  trackId   String
-  track     Track                  @relation(fields: [trackId], references: [id])
-  title     String
-  body      String
-  status    ProblemStatementStatus @default(DRAFT)
-  mentorNote String?
+  id           String                 @id @default(cuid())
+  teamId       String
+  team         Team                   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  trackId      String
+  track        Track                  @relation(fields: [trackId], references: [id])
+  title        String
+  body         String
+  status       ProblemStatementStatus @default(DRAFT)
+  mentorNote   String?
   reviewedById String?
   submittedAt  DateTime?
   reviewedAt   DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
 
   @@unique([teamId]) // one living problem statement per team
 }
@@ -260,16 +308,16 @@ enum FeatureCategory {
 }
 
 model Feature {
-  id         String          @id @default(cuid())
-  trackId    String? // null = available to all tracks
-  track      Track?          @relation(fields: [trackId], references: [id])
-  category   FeatureCategory
-  name       String
+  id          String          @id @default(cuid())
+  trackId     String? // null = available to all tracks
+  track       Track?          @relation(fields: [trackId], references: [id])
+  category    FeatureCategory
+  name        String
   description String
-  effect     Json // structured effect descriptor applied server-side / at evaluation
-  cost       Int
-  maxPerTeam Int             @default(1)
-  active     Boolean         @default(true)
+  effect      Json // structured effect descriptor applied server-side / at evaluation
+  cost        Int
+  maxPerTeam  Int             @default(1)
+  active      Boolean         @default(true)
 
   purchases FeaturePurchase[]
 }
@@ -336,18 +384,18 @@ enum CasinoOutcome {
 }
 
 model CasinoBet {
-  id                 String        @id @default(cuid())
-  teamId             String
-  team               Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  tier               CasinoTier
-  wagerAmount        Int
-  outcome            CasinoOutcome
-  preBalance         Int
-  postBalance        Int
-  reward             Int // net CC delta from casino (0 for vault/perk-only outcomes)
-  multiplierAwarded  Float         @default(1)
-  perk               Json? // e.g. TIER1_API_KEY / TOOL_LAG_3S / SCORE_MULTIPLIER
-  createdAt          DateTime      @default(now())
+  id                String        @id @default(cuid())
+  teamId            String
+  team              Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  tier              CasinoTier
+  wagerAmount       Int
+  outcome           CasinoOutcome
+  preBalance        Int
+  postBalance       Int
+  reward            Int // net CC delta from casino (0 for vault/perk-only outcomes)
+  multiplierAwarded Float         @default(1)
+  perk              Json? // e.g. TIER1_API_KEY / TOOL_LAG_3S / SCORE_MULTIPLIER
+  createdAt         DateTime      @default(now())
 
   @@index([teamId])
 }
@@ -362,16 +410,16 @@ enum SubmissionStatus {
 }
 
 model Submission {
-  id         String           @id @default(cuid())
-  teamId     String           @unique
-  team       Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  repoUrl    String
-  notes      String?
-  fileKey    String? // storage abstraction key (local disk or S3)
-  status     SubmissionStatus @default(OPEN)
-  lockedAt   DateTime?
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
+  id        String           @id @default(cuid())
+  teamId    String           @unique
+  team      Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  repoUrl   String
+  notes     String?
+  fileKey   String? // storage abstraction key (local disk or S3)
+  status    SubmissionStatus @default(OPEN)
+  lockedAt  DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   jobs EvaluationJob[]
 }
@@ -403,8 +451,8 @@ enum EvaluationJobState {
 }
 
 model EvaluationResult {
-  id              String @id @default(cuid())
-  jobId           String @unique
+  id              String        @id @default(cuid())
+  jobId           String        @unique
   job             EvaluationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
   teamId          String
   accuracyScore   Int // 0..1000 normalised per metric
@@ -415,18 +463,18 @@ model EvaluationResult {
   payloadsTotal   Int
   payloadsPassed  Int
   rawMetrics      Json // per-payload MetricResults + timings
-  createdAt       DateTime @default(now())
+  createdAt       DateTime      @default(now())
 }
 
 // seeded adversarial payloads per track (PRD §3 volunteer deliverable #6)
 model GauntletPayload {
-  id         String @id @default(cuid())
-  trackId    String
-  track      Track  @relation(fields: [trackId], references: [id], onDelete: Cascade)
-  kind       String // PROMPT_INJECTION | RATE_LIMIT | SCHEMA_DRIFT | CORRUPT_INPUT | VALIDITY
-  prompt     String
+  id            String @id @default(cuid())
+  trackId       String
+  track         Track  @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  kind          String // PROMPT_INJECTION | RATE_LIMIT | SCHEMA_DRIFT | CORRUPT_INPUT | VALIDITY
+  prompt        String
   passCondition String
-  position   Int
+  position      Int
 
   @@index([trackId])
 }
@@ -434,16 +482,16 @@ model GauntletPayload {
 // ---------------------------------------------------------------- scoring
 
 model Score {
-  id              String   @id @default(cuid())
-  teamId          String   @unique
-  team            Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  gauntletScore   Int
-  casinoMultiplier Float   @default(1)
-  disciplineScore Int
-  finalScore      Int
-  breakdown       Json // transparent explanation of each component
-  computedAt      DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String   @id @default(cuid())
+  teamId           String   @unique
+  team             Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  gauntletScore    Int
+  casinoMultiplier Float    @default(1)
+  disciplineScore  Int
+  finalScore       Int
+  breakdown        Json // transparent explanation of each component
+  computedAt       DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model LeaderboardEntry {
