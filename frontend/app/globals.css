@@ -1,41 +1,174 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  /* ---- Type tier (Space Grotesk / Inter / Geist) ---- */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Space Grotesk", var(--font-sans);
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* white / black / purple — purple is an accent, not a flood */
-  --color-ink: #0a0a0a;
-  --color-ink-soft: #52525b;
-  --color-line: #e4e4e7;
-  --color-paper: #ffffff;
-  --color-paper-dim: #fafafa;
-  --color-accent: #6d28d9; /* violet-700 */
-  --color-accent-strong: #5b21b6;
-  --color-accent-soft: #f3efff;
-  --color-good: #15803d;
-  --color-bad: #b91c1c;
+  /* ---- Core surfaces (the void) ---- */
+  --color-void: #050505;
+  --color-module: #0a0a0a;
+  --color-module-raised: #111111;
+  --color-line: #18181b;
+  --color-line-strong: #27272a;
+
+  /* ---- Text ---- */
+  --color-ink: #fafafa;
+  --color-ink-soft: #a1a1aa;
+  --color-ink-faint: #52525b;
+
+  /* ---- Accent (the agent) ---- */
+  --color-accent: #a855f7;
+  --color-accent-strong: #c084fc;
+  --color-accent-dim: #7c3aed;
+  --color-accent-soft: rgba(168, 85, 247, 0.12);
+
+  /* ---- Utility ---- */
+  --color-good: #22c55e;
+  --color-good-soft: rgba(34, 197, 94, 0.12);
+  --color-bad: #f87171;
+  --color-bad-soft: rgba(248, 113, 113, 0.12);
+  --color-warn: #fabc4e;
+  --color-warn-soft: rgba(250, 188, 78, 0.12);
 }
 
+/* ---- Base ---- */
 html {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
-  background: var(--color-paper);
+  background: var(--color-void);
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
-  background: var(--color-accent-soft);
-  color: var(--color-accent-strong);
+  background: rgba(168, 85, 247, 0.35);
+  color: #fff;
 }
 
-/* thin elegant scrollbars */
+/* thin technical scrollbars */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #d4d4d8 transparent;
+  scrollbar-color: #27272a transparent;
+}
+
+/* ---- Technical grid backdrop ---- */
+.tech-grid {
+  background-image:
+    linear-gradient(to right, rgba(24, 24, 27, 0.55) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(24, 24, 27, 0.55) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.tech-grid-fine {
+  background-image:
+    linear-gradient(to right, rgba(24, 24, 27, 0.5) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(24, 24, 27, 0.5) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ---- Module container (0A0A0A + 1px #18181B) ---- */
+.module {
+  background-color: var(--color-module);
+  border: 1px solid var(--color-line);
+}
+
+.module-hover {
+  transition: border-color 0.2s ease;
+}
+.module-hover:hover {
+  border-color: var(--color-accent);
+}
+
+/* ---- Coordinate-mark crosshair corners ---- */
+.coord-frame {
+  position: relative;
+}
+.coord-frame::before,
+.coord-frame::after {
+  content: "+";
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--color-line-strong);
+  pointer-events: none;
+}
+.coord-frame::before {
+  top: -5px;
+  left: -4px;
+}
+.coord-frame::after {
+  top: -5px;
+  right: -4px;
+}
+
+/* ---- Glow text for hero / ranks ---- */
+.glow-text {
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+}
+
+/* ---- Primary button glow ---- */
+.btn-glow {
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.25);
+}
+.btn-glow:hover {
+  box-shadow: 0 0 22px rgba(168, 85, 247, 0.4);
+}
+
+/* ---- Focus glow for inputs ---- */
+.input-glow:focus {
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.35);
+}
+
+/* ---- Glitch effect for display headers ---- */
+@keyframes glitch {
+  0%, 93%, 100% { text-shadow: none; opacity: 1; }
+  94% { text-shadow: 2px 0 0 #a855f7, -2px 0 0 #3b82f6; opacity: 0.8; }
+  95% { text-shadow: -2px 0 0 #a855f7, 2px 0 0 #3b82f6; opacity: 0.9; }
+  96% { text-shadow: 2px 0 0 #a855f7, -2px 0 0 #3b82f6; opacity: 0.8; }
+  97% { text-shadow: -2px 0 0 #a855f7, 2px 0 0 #3b82f6; opacity: 1; }
+}
+.glitch-text {
+  animation: glitch 4s infinite linear;
+}
+
+/* ---- Thin 4px progress bar ---- */
+.progress-bar {
+  position: relative;
+  height: 4px;
+  background: var(--color-line);
+  width: 100%;
+  overflow: hidden;
+}
+.progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: var(--color-accent);
+  transition: width 0.6s ease;
+}
+
+/* ---- Subtle LED pulse ---- */
+@keyframes ledPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.led-pulse {
+  animation: ledPulse 1.8s ease-in-out infinite;
+}
+
+/* ---- Announcement ticker (spectator) ---- */
+@keyframes tickerScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-track {
+  animation: tickerScroll 30s linear infinite;
 }

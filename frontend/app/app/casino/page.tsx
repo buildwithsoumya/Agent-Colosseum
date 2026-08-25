@@ -19,23 +19,26 @@ const TIER_INFO = [
   {
     key: "VAULT" as const,
     name: "The Vault",
-    risk: "0% risk",
+    risk: "0% RISK",
+    riskTone: "text-good",
+    border: "border-good/30",
     blurb: "Lock in your current balance. No bonus, no penalty.",
-    tone: "hover:border-violet-300",
   },
   {
     key: "OVERCLOCK" as const,
     name: "The Overclock",
     risk: "50 / 50",
+    riskTone: "text-accent",
+    border: "border-accent/30",
     blurb: "Fixed 200 CC stake. Win Tier-1 API keys, or eat +3s tool lag in the Gauntlet.",
-    tone: "hover:border-violet-400",
   },
   {
     key: "HIGH_ROLLER" as const,
     name: "The High-Roller",
-    risk: "30% win",
+    risk: "30% WIN",
+    riskTone: "text-bad",
+    border: "border-bad/30",
     blurb: "Stake 35% of your balance. Win a ×2.5 score multiplier — lose the stake entirely.",
-    tone: "hover:border-red-300",
   },
 ];
 
@@ -43,6 +46,7 @@ export default function CasinoPage() {
   const [state, setState] = useState<CasinoState | null>(null);
   const [spinning, setSpinning] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<null | { outcome: string; tier: string; postBalance: number; mult: number }>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const { eventState, on } = useRealtime();
 
   const load = useCallback(async () => {
@@ -75,24 +79,25 @@ export default function CasinoPage() {
     }
   }
 
-  const [message, setMessage] = useState<string | null>(null);
-  void message;
-
   if (!state) return <p className="text-sm text-ink-soft">Loading casino…</p>;
 
   return (
     <div className="space-y-4">
       {!state.gates.casinoOpen && (
-        <p className="rounded-xl border border-line bg-paper-dim px-4 py-3 text-sm text-ink-soft">
-          The Casino opens only during Phase 3. Code freezes — hands off keyboards.
-        </p>
+        <div className="module border-l-2 border-l-warn px-4 py-3">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-warn">
+            The Casino opens only during Phase 3. Code freezes — hands off keyboards.
+          </p>
+        </div>
       )}
       {state.myBet && (
         <Card>
           <CardContent className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Badge tone="accent">Wager locked</Badge>
-              <span className="text-sm font-medium">{state.myBet.tier.replace("_", "-")}</span>
+              <span className="font-mono text-sm font-semibold uppercase tracking-wider text-ink">
+                {state.myBet.tier.replace("_", "-")}
+              </span>
             </div>
             <p className="font-mono text-sm tabular-nums text-ink-soft">
               balance {state.myBet.postBalance} CC
@@ -104,10 +109,12 @@ export default function CasinoPage() {
       <div className="grid gap-3 lg:grid-cols-3">
         {TIER_INFO.map((t) => (
           <motion.div key={t.key} whileHover={{ y: -2 }}>
-            <Card className={`h-full ${t.tone}`}>
+            <Card className={`module-hover coord-frame h-full ${t.border}`}>
               <CardHeader className="flex items-center justify-between">
                 <CardTitle>{t.name}</CardTitle>
-                <Badge>{t.risk}</Badge>
+                <span className={`font-mono text-[10px] font-semibold uppercase tracking-[0.14em] ${t.riskTone}`}>
+                  {t.risk}
+                </span>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="min-h-[48px] text-[13px] leading-relaxed text-ink-soft">{t.blurb}</p>
@@ -117,7 +124,7 @@ export default function CasinoPage() {
                   onClick={() => bet(t.key)}
                   className="w-full"
                 >
-                  {spinning === t.key ? "Spinning…" : state.myBet ? "Locked" : `Place wager`}
+                  {spinning === t.key ? "Spinning…" : state.myBet ? "Locked" : "Place wager"}
                 </Button>
               </CardContent>
             </Card>
@@ -129,34 +136,53 @@ export default function CasinoPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          className={`rounded-2xl border px-6 py-8 text-center ${
+          className={`border px-6 py-8 text-center ${
             outcome?.outcome === "WIN"
-              ? "border-green-200 bg-green-50"
+              ? "border-good/40 bg-good-soft"
               : outcome?.outcome === "LOSS"
-                ? "border-red-200 bg-red-50"
-                : "border-line bg-paper-dim"
+                ? "border-bad/40 bg-bad-soft"
+                : "border-line bg-module"
           }`}
         >
           {spinning ? (
-            <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1 }} className="font-mono text-lg font-bold">
+            <motion.p
+              animate={{ opacity: [0.4, 1, 0.4] }}
+              transition={{ repeat: Infinity, duration: 1 }}
+              className="font-mono text-lg font-bold uppercase tracking-[0.14em] text-ink"
+            >
               Drawing result…
             </motion.p>
           ) : outcome ? (
             <>
               <p className="font-mono text-3xl font-black tracking-tight">
-                {outcome.outcome === "WIN" ? (outcome.mult > 1 ? "×2.5 JACKPOT" : "WIN") : outcome.outcome === "LOSS" ? "LOSS" : "LOCKED IN"}
+                {outcome.outcome === "WIN" ? (
+                  <span className={outcome.mult > 1 ? "text-warn glow-text" : "text-good"}>
+                    {outcome.mult > 1 ? "×2.5 JACKPOT" : "WIN"}
+                  </span>
+                ) : outcome.outcome === "LOSS" ? (
+                  <span className="text-bad">LOSS</span>
+                ) : (
+                  <span className="text-ink">LOCKED IN</span>
+                )}
               </p>
-              <p className="mt-1 text-xs text-ink-soft">balance now {outcome.postBalance} CC</p>
+              <p className="mt-1 font-mono text-[11px] uppercase tracking-wider text-ink-soft">
+                balance now {outcome.postBalance} CC
+              </p>
             </>
           ) : null}
         </motion.div>
       )}
 
-      <p className="text-[11px] leading-relaxed text-neutral-400">
-        Bust protection: losses can never take you below {state.bustFloor} CC. All outcomes are drawn by the server and recorded in an audit ledger.
-      </p>
+      {message && (
+        <p className="border border-bad/40 bg-bad-soft px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-bad">
+          [ ERROR ] {message}
+        </p>
+      )}
 
-      {eventState && null}
+      <p className="font-mono text-[10px] uppercase tracking-wider leading-relaxed text-ink-faint">
+        Bust protection: losses can never take you below {state.bustFloor} CC. All outcomes are drawn by the
+        server and recorded in an audit ledger.
+      </p>
     </div>
   );
 }

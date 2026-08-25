@@ -31,12 +31,19 @@ export function CreditsWidget({ className }: { className?: string }) {
   useEffect(() => on("credits:updated", onCredits), [on, onCredits]);
 
   return (
-    <div className={`relative overflow-hidden rounded-xl border border-line bg-white px-4 py-3 ${className ?? ""}`}>
-      <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-ink-soft">Colosseum Credits</p>
+    <div
+      className={`module relative overflow-hidden rounded-[0.25rem] px-4 py-3 ${className ?? ""}`}
+    >
+      <div className="flex items-center justify-between">
+        <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-soft">
+          Colosseum Credits
+        </p>
+        <span className="h-1.5 w-1.5 bg-accent led-pulse" aria-hidden />
+      </div>
       <motion.p
         key={balance ?? "…"}
         animate={reduced ? undefined : flash ? { scale: [1, 1.08, 1] } : undefined}
-        className="mt-0.5 font-mono text-2xl font-bold tabular-nums"
+        className="mt-1 font-mono text-2xl font-bold tabular-nums text-ink"
       >
         {balance === null ? "—" : formatCC(balance)}
       </motion.p>
@@ -45,7 +52,9 @@ export function CreditsWidget({ className }: { className?: string }) {
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
-          className={`mt-0.5 text-xs font-semibold ${flash.amount >= 0 ? "text-good" : "text-bad"}`}
+          className={`mt-0.5 font-mono text-[11px] uppercase tracking-wider ${
+            flash.amount >= 0 ? "text-good" : "text-bad"
+          }`}
         >
           {flash.amount >= 0 ? "+" : ""}
           {formatCC(flash.amount)} · {flash.reason}

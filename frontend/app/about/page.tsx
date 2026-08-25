@@ -3,9 +3,9 @@ import { PageTitle, SectionLabel } from "@/components/ui/typography";
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen tech-grid">
       <SiteNav />
-      <main className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+      <main className="mx-auto max-w-[1280px] px-4 py-14 sm:px-6">
         <SectionLabel>About the event</SectionLabel>
         <PageTitle sub="Agent Colosseum is a multi-stage, gamified hackathon where teams build and deploy autonomous AI agents using standard APIs, custom tool pipelines and framework-agnostic LLM integrations.">
           Not a static hackathon.
@@ -43,10 +43,13 @@ export default function AboutPage() {
               ["Two generic tasks per track", "Written at domain level so they apply to any approved problem statement."],
               ["The Feature Store is the build mechanism", "Tool modules, defensive buffs and offensive sabotage — priced so a competent build fits in 1,000 CC."],
               ["Risk is optional but rewarded", "Casino Royale wagers can multiply your Gauntlet score or torch your credits."],
-            ].map(([t, d]) => (
-              <div key={t} className="rounded-2xl border border-line bg-white p-5">
-                <h3 className="text-sm font-semibold tracking-tight text-ink">{t}</h3>
-                <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">{d}</p>
+            ].map(([t, d], i) => (
+              <div key={t} className="module module-hover coord-frame relative p-5">
+                <span className="absolute right-4 top-4 font-mono text-[10px] text-ink-faint">
+                  [ INFO-0{i + 1} ]
+                </span>
+                <h3 className="font-display text-base font-semibold tracking-tight text-ink">{t}</h3>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">{d}</p>
               </div>
             ))}
           </div>
