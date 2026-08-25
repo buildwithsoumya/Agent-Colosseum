@@ -17,24 +17,32 @@ const DEMO_ACCOUNTS = [
 export default function LoginPage() {
   const { login, register } = useSession();
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register" | "registered">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (mode === "register" && password !== confirm) {
+      setError("Passwords do not match");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       if (mode === "login") {
         const user = await login(email, password);
-        router.push(user.role === "ADMIN" ? "/admin" : user.role === "MENTOR" ? "/mentor" : "/app");
+        router.push(
+          user.globalRole === "ADMIN" ? "/admin" : user.globalRole === "MENTOR" ? "/mentor" : "/app",
+        );
       } else {
+        // The server always assigns PARTICIPANT — privileged roles arrive via admin invitations.
         await register(name, email, password);
-        router.push("/app/team");
+        setMode("registered");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -47,6 +55,27 @@ export default function LoginPage() {
     setMode("login");
     setEmail(demoEmail);
     setPassword("password123");
+  }
+
+  if (mode === "registered") {
+    return (
+      <div className="grid min-h-screen place-items-center px-4">
+        <div className="w-full max-w-sm rounded-2xl border border-line bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-green-50 text-2xl">✓</div>
+          <h1 className="mt-4 text-xl font-bold tracking-tight">Account created successfully.</h1>
+          <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+            You&apos;re registered as a <span className="font-semibold text-accent-strong">Participant</span>.
+          </p>
+          <p className="mt-1 text-sm text-ink-soft">Next step: create or join a team.</p>
+          <Button
+            onClick={() => router.push("/app/team")}
+            className="mt-6 w-full bg-accent hover:bg-accent-strong"
+          >
+            Create or join a team →
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -67,12 +96,12 @@ export default function LoginPage() {
             <span className="absolute -right-4 -top-4 font-mono text-[10px] text-line-strong">+</span>
             <SectionLabel>{mode === "login" ? "Secure access" : "New operator"}</SectionLabel>
             <h1 className="mt-3 font-display text-3xl font-bold tracking-tight">
-              {mode === "login" ? "Enter the arena" : "Join the roster"}
+              {mode === "login" ? "Enter the arena" : "Create your account"}
             </h1>
             <p className="mt-2 text-[13px] text-ink-soft">
               {mode === "login"
                 ? "Log in to your team or event staff account."
-                : "Create a participant account — you can form a team next."}
+                : "Every new account is a Participant — you'll create or join a team next."}
             </p>
           </div>
 
@@ -82,13 +111,16 @@ export default function LoginPage() {
             )}
             <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             <Input type="password" placeholder="Password (min 8 characters)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete={mode === "login" ? "current-password" : "new-password"} />
+            {mode === "register" && (
+              <Input type="password" placeholder="Confirm password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} autoComplete="new-password" />
+            )}
             {error && (
               <p className="border border-bad/40 bg-bad-soft px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-bad">
                 [ ERROR ] {error}
               </p>
             )}
-            <Button type="submit" disabled={busy} className="w-full">
-              {busy ? "…" : mode === "login" ? "Log in" : "Create account"}
+            <Button type="submit" disabled={busy} className="w-full bg-accent hover:bg-accent-strong">
+              {busy ? "…" : mode === "login" ? "Log in" : "Create Account"}
             </Button>
           </form>
 
@@ -97,7 +129,7 @@ export default function LoginPage() {
               <>
                 No account?{" "}
                 <button onClick={() => setMode("register")} className="font-semibold text-accent hover:text-accent-strong">
-                  Register
+                  Create one
                 </button>
               </>
             ) : (
@@ -108,6 +140,10 @@ export default function LoginPage() {
                 </button>
               </>
             )}
+          </p>
+          <p className="mt-6 rounded-lg bg-paper-dim px-3 py-2 text-[11px] leading-relaxed text-neutral-400">
+            Mentor and organiser accounts are provisioned by event admins via invitation — they cannot be
+            self-registered.
           </p>
         </div>
       </div>

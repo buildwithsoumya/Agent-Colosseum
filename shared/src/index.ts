@@ -2,8 +2,17 @@ import { z } from "zod";
 
 /* ---------------------------------- roles --------------------------------- */
 
-export const Role = z.enum(["ADMIN", "MENTOR", "PARTICIPANT", "SPECTATOR"]);
-export type Role = z.infer<typeof Role>;
+/** Global application roles — assigned ONLY by the server (seed, admin provisioning, invitations). */
+export const GlobalRole = z.enum(["ADMIN", "MENTOR", "PARTICIPANT"]);
+export type GlobalRole = z.infer<typeof GlobalRole>;
+
+/** Team-level roles — scoped to a single team membership. */
+export const TeamRole = z.enum(["MEMBER", "CAPTAIN"]);
+export type TeamRole = z.infer<typeof TeamRole>;
+
+/** Account status — SUSPENDED users fail all authentication. */
+export const UserStatus = z.enum(["ACTIVE", "SUSPENDED"]);
+export type UserStatus = z.infer<typeof UserStatus>;
 
 /* ---------------------------------- phases -------------------------------- */
 
@@ -210,5 +219,18 @@ export interface PublicUser {
   id: string;
   email: string;
   name: string;
-  role: Role;
+  globalRole: GlobalRole;
 }
+
+/* ------------------------------ invitations ------------------------------- */
+
+/** Roles that may ever be granted through an invitation. ADMIN is deliberately excluded. */
+export const InvitableRole = z.enum(["MENTOR", "CAPTAIN"]);
+export type InvitableRole = z.infer<typeof InvitableRole>;
+
+export const InvitationAcceptInput = z.object({
+  token: z.string().min(20).max(200),
+  name: z.string().min(2).max(80),
+  password: z.string().min(8).max(128),
+});
+export type InvitationAcceptInputType = z.infer<typeof InvitationAcceptInput>;

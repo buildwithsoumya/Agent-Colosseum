@@ -27,16 +27,24 @@ test.describe("agent colosseum happy path", () => {
 
   test("participant logs in, creates team, picks track, submits PS", async ({ page }) => {
     await page.goto("/login");
-    await page.getByPlaceholder("Email").fill("e2e.captain@colosseum.dev");
-    await page.getByPlaceholder(/Password/).fill("password123");
-    await page.getByRole("button", { name: /Log in|Log in/i }).click();
-    // register if needed
-    await page.waitForTimeout(500);
-    if (page.url().includes("/login")) {
-      await page.getByRole("button", { name: "Register" }).click();
+    // SECURITY: no role selector may exist anywhere on public registration
+    const registerFirst = async () => {
+      await page.goto("/login");
+      if (!(await page.getByRole("button", { name: "Create one" }).isVisible().catch(() => false))) {
+        // already on register mode or different copy — try clicking by text
+      }
+      await page.getByRole("button", { name: "Create one" }).click().catch(() => {});
+      const selectCount = await page.locator('select[name*="role" i], [data-testid="role-selector"]').count();
+      if (selectCount > 0) throw new Error("ROLE SELECTOR FOUND ON PUBLIC REGISTRATION");
       await page.getByPlaceholder("Your name").fill("E2E Captain");
-      await page.getByRole("button", { name: /Create account/ }).click();
-    }
+      await page.getByPlaceholder("Email").fill("e2e.captain@colosseum.dev");
+      await page.getByPlaceholder(/Password \(min 8/).fill("password123");
+      await page.getByPlaceholder("Confirm password").fill("password123");
+      await page.getByRole("button", { name: "Create Account" }).click();
+      await expect(page.getByText("You're registered as a")).toBeVisible({ timeout: 10_000 });
+      await page.getByRole("button", { name: /Create or join a team/ }).click();
+    };
+    await registerFirst();
     await page.waitForURL("**/app/team", { timeout: 20_000 });
 
     await page.getByPlaceholder("Team name").fill("E2E Legion");

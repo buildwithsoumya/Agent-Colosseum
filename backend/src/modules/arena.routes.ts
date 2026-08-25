@@ -111,7 +111,7 @@ arenaRouter.post(
       `team:${teamId}`,
     );
     if (won) {
-      await recordActivity("ARENA", `${req.membership?.isCaptain ? "" : ""}${await teamName(teamId)} won ${reward} CC in the Game Arena`);
+      await recordActivity("ARENA", `${await teamName(teamId)} won ${reward} CC in the Game Arena`);
       announceBalance(teamId, balanceAfter, { amount: reward, reason: `Arena win: ${game.name}` });
     }
     res.json({ result: won ? "WIN" : "LOSS", reward, balance: balanceAfter });

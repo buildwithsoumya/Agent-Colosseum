@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireRole, requireTeam } from "../middleware/auth.js";
+import { requireGlobalRole, requireTeam } from "../middleware/auth.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { gauntletOverview, gauntletStatusForTeam } from "../services/gauntlet.js";
 
@@ -17,7 +17,7 @@ gauntletRouter.get(
 /** Admin/operator monitoring feed. */
 gauntletRouter.get(
   "/overview",
-  requireRole("ADMIN"),
+  requireGlobalRole("ADMIN"),
   asyncHandler(async (_req, res) => {
     res.json({ jobs: await gauntletOverview() });
   }),

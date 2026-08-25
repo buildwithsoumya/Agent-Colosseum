@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ProblemStatementStatus } from "@ac/shared";
 import { badRequest, conflict, notFound, unprocessable } from "../lib/errors.js";
 import { prisma } from "../lib/prisma.js";
-import { requireRole, requireTeam } from "../middleware/auth.js";
+import { requireGlobalRole, requireTeam } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { actionLimiter } from "../middleware/rateLimit.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
@@ -123,13 +123,13 @@ async function review(psId: string, decision: string, note: string | undefined, 
 /** Mentor queue — mentors see their assigned track first but may act across tracks. */
 problemsRouter.get(
   "/queue",
-  requireRole("MENTOR", "ADMIN"),
+  requireGlobalRole("MENTOR", "ADMIN"),
   asyncHandler(async (req, res) => {
     const statusFilter = (req.query.status as ProblemStatementStatus | undefined)?.toUpperCase();
     const rows = await prisma.problemStatement.findMany({
       where: {
         ...(statusFilter ? { status: statusFilter as ProblemStatementStatus } : {}),
-        ...(req.user!.role === "MENTOR" && req.query.mine === "1"
+        ...(req.user!.globalRole === "MENTOR" && req.query.mine === "1"
           ? { track: { users: { some: { id: req.user!.id } } } }
           : {}),
       },
@@ -146,7 +146,7 @@ problemsRouter.get(
 problemsRouter.post(
   "/:id/review",
   actionLimiter,
-  requireRole("MENTOR", "ADMIN"),
+  requireGlobalRole("MENTOR", "ADMIN"),
   validate(ReviewInput),
   asyncHandler(async (req, res) => {
     const { decision, note } = req.body as z.infer<typeof ReviewInput>;

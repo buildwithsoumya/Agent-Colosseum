@@ -16,10 +16,10 @@ interface TeamData {
     code: string;
     creditBalance: number;
     track: { key: string; name: string } | null;
-    members: Array<{ isCaptain: boolean; user: { id: string; name: string; email: string } }>;
+    members: Array<{ teamRole: "MEMBER" | "CAPTAIN"; user: { id: string; name: string; email: string } }>;
     problemStatements: Array<{ status: string; title: string }>;
   };
-  isCaptain: boolean;
+  teamRole: "MEMBER" | "CAPTAIN";
 }
 
 interface TrackOption {
@@ -134,6 +134,7 @@ export default function TeamPage() {
     );
   }
 
+  const isCaptain = data.teamRole === "CAPTAIN";
   const editable = !psStatus || ["DRAFT", "REJECTED", "CHANGES_REQUESTED"].includes(psStatus);
   const phaseAllowsTrack = true;
 
@@ -159,7 +160,7 @@ export default function TeamPage() {
                   <span className="h-1.5 w-1.5 bg-accent" />
                   {m.user.name}
                 </span>
-                {m.isCaptain && <Badge tone="accent">Captain</Badge>}
+                <Badge tone={m.teamRole === "CAPTAIN" ? "accent" : "neutral"}>{m.teamRole}</Badge>
               </li>
             ))}
           </ul>
@@ -173,7 +174,7 @@ export default function TeamPage() {
                 {tracks.map((t) => (
                   <button
                     key={t.key}
-                    disabled={!phaseAllowsTrack || !data.isCaptain}
+                    disabled={!phaseAllowsTrack || data.teamRole !== "CAPTAIN"}
                     onClick={() => selectTrack(t.key)}
                     className="module module-hover px-4 py-3 text-left disabled:pointer-events-none disabled:opacity-40"
                   >

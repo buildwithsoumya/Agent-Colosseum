@@ -21,7 +21,7 @@ const teamSelect = {
   trackId: true,
   track: { select: { key: true, name: true } },
   members: {
-    select: { isCaptain: true, joinedAt: true, user: { select: { id: true, name: true, email: true } } },
+    select: { teamRole: true, joinedAt: true, user: { select: { id: true, name: true, email: true } } },
     orderBy: { joinedAt: "asc" as const },
   },
   problemStatements: { select: { status: true, title: true } },
@@ -43,7 +43,7 @@ teamsRouter.post(
         data: {
           name: (req.body as { name: string }).name,
           code,
-          members: { create: { userId: req.user!.id, isCaptain: true } },
+          members: { create: { userId: req.user!.id, teamRole: "CAPTAIN" } },
         },
       });
       // opening balance lands immediately on team creation during an active event
@@ -96,7 +96,7 @@ teamsRouter.get(
       where: { id: req.membership!.teamId },
       select: teamSelect,
     });
-    res.json({ team, isCaptain: req.membership!.isCaptain });
+    res.json({ team, teamRole: req.membership!.teamRole });
   }),
 );
 
@@ -105,7 +105,7 @@ teamsRouter.patch(
   requireTeam,
   validate(z.object({ trackKey: z.string() })),
   asyncHandler(async (req, res) => {
-    if (!req.membership!.isCaptain) throw forbidden("Only the captain can set the track");
+    if (!req.membership || req.membership.teamRole !== "CAPTAIN") throw forbidden("Only the captain can set the track");
     const snap = await snapshot();
     if (snap.phase !== "PHASE_0") throw unprocessable("Track selection closes after onboarding");
 

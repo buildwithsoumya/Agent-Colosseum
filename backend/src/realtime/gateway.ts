@@ -33,7 +33,8 @@ export function initGateway(httpServer: HttpServer): Server {
         include: { user: true },
       });
       if (!session || session.expiresAt < new Date()) return next();
-      socket.data.user = { id: session.user.id, role: session.user.role };
+      if (session.user.status !== "ACTIVE") return next();
+      socket.data.user = { id: session.user.id, globalRole: session.user.globalRole };
       const membership = await prisma.teamMember.findUnique({ where: { userId: session.user.id } });
       if (membership) socket.data.teamId = membership.teamId;
       next();
@@ -45,11 +46,11 @@ export function initGateway(httpServer: HttpServer): Server {
 
   io.on("connection", (socket: Socket) => {
     socket.join(ROOMS.event);
-    const user = socket.data.user as { id: string; role: string } | undefined;
+    const user = socket.data.user as { id: string; globalRole: string } | undefined;
 
     if (user) {
-      if (user.role === "ADMIN") void socket.join(ROOMS.admins);
-      if (user.role === "MENTOR") void socket.join(ROOMS.mentors);
+      if (user.globalRole === "ADMIN") void socket.join(ROOMS.admins);
+      if (user.globalRole === "MENTOR") void socket.join(ROOMS.mentors);
       if (socket.data.teamId) void socket.join(ROOMS.team(socket.data.teamId as string));
     }
   });

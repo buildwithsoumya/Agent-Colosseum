@@ -27,8 +27,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return;
     if (!user) router.replace("/login");
-    else if (user.role === "ADMIN") router.replace("/admin");
-    else if (user.role === "MENTOR") router.replace("/mentor");
+    else if (user.globalRole === "ADMIN") router.replace("/admin");
+    else if (user.globalRole === "MENTOR") router.replace("/mentor");
   }, [user, loading, router]);
 
   if (loading || !user) {
@@ -59,7 +59,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-2">
               <Link
-                href={user.role === "PARTICIPANT" ? "/spectator" : "/admin"}
+                href={user.globalRole === "ADMIN" ? "/admin" : user.globalRole === "MENTOR" ? "/mentor" : "/spectator"}
                 className="hidden rounded-[0.125rem] border border-line px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-soft transition-colors hover:border-accent hover:text-accent sm:block"
               >
                 Stage view

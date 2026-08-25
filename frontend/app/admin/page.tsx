@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { UserManagement } from "@/components/admin/user-management";
 
 interface Overview {
   phase: { phase: string; status: string; secondsRemaining: number };
@@ -24,7 +25,7 @@ interface TeamRow {
   code: string;
   creditBalance: number;
   track: { name: string } | null;
-  members: Array<{ user: { name: string }; isCaptain: boolean }>;
+  members: Array<{ user: { name: string }; teamRole: "MEMBER" | "CAPTAIN" }>;
   problemStatements: Array<{ status: string }>;
   submissions: Array<{ status: string }>;
 }
@@ -70,7 +71,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (loading) return;
     if (!user) router.replace("/login");
-    else if (user.role !== "ADMIN") router.replace(user.role === "MENTOR" ? "/mentor" : "/app");
+    else if (user.globalRole !== "ADMIN") router.replace(user.globalRole === "MENTOR" ? "/mentor" : "/app");
   }, [user, loading, router]);
 
   async function action(path: string) {
@@ -104,7 +105,7 @@ export default function AdminPage() {
     }
   }
 
-  if (loading || !user || user.role !== "ADMIN") {
+  if (loading || !user || user.globalRole !== "ADMIN") {
     return (
       <div className="grid min-h-screen place-items-center tech-grid">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-soft">
@@ -202,6 +203,8 @@ export default function AdminPage() {
                 </div>
               ))}
             </div>
+
+            <UserManagement teams={teams.map((t) => ({ id: t.id, name: t.name }))} />
 
             <div className="grid gap-4 lg:grid-cols-2">
               {/* Teams + credits adjustment */}
