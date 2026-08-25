@@ -17,4 +17,5 @@ export const unauthorized = (msg = "Authentication required") => new AppError(40
 export const forbidden = (msg = "You do not have permission to do that") => new AppError(403, msg, "FORBIDDEN");
 export const notFound = (msg = "Not found") => new AppError(404, msg, "NOT_FOUND");
 export const conflict = (msg: string) => new AppError(409, msg, "CONFLICT");
+export const gone = (msg = "This resource is no longer available") => new AppError(410, msg, "GONE");
 export const unprocessable = (msg: string) => new AppError(422, msg, "UNPROCESSABLE");

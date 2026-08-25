@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import type { Role } from "@ac/shared";
+import type { GlobalRole, TeamRole } from "@ac/shared";
 import { prisma } from "../lib/prisma.js";
 import { sha256 } from "../lib/rng.js";
 import { unauthorized } from "../lib/errors.js";
@@ -10,7 +10,12 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  role: Role;
+  globalRole: GlobalRole;
+}
+
+export interface TeamMembershipInfo {
+  teamId: string;
+  teamRole: TeamRole;
 }
 
 declare global {
@@ -18,7 +23,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthUser;
-      membership?: { teamId: string; isCaptain: boolean };
+      membership?: TeamMembershipInfo;
     }
   }
 }
@@ -34,12 +39,14 @@ export async function authOptional(req: Request, _res: Response, next: NextFunct
       include: { user: true },
     });
     if (!session || session.expiresAt < new Date()) return next();
+    // suspended accounts fail authentication everywhere, server-side
+    if (session.user.status !== "ACTIVE") return next();
 
     req.user = {
       id: session.user.id,
       email: session.user.email,
       name: session.user.name,
-      role: session.user.role,
+      globalRole: session.user.globalRole,
     };
     return next();
   } catch (err) {
@@ -52,12 +59,23 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
   next();
 }
 
-export function requireRole(...roles: Role[]) {
+export function requireRole(...roles: GlobalRole[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) return next(unauthorized());
-    if (!roles.includes(req.user.role)) return next(unauthorized("Insufficient role"));
+    if (!roles.includes(req.user.globalRole)) return next(unauthorized("Insufficient role"));
     next();
   };
+}
+
+/** Alias making intent explicit where only mentors/admins may act. */
+export const requireGlobalRole = requireRole;
+
+/** Captain-only actions within the caller's own team. */
+export function requireTeamCaptain(req: Request, _res: Response, next: NextFunction): void {
+  if (!req.user) return next(unauthorized());
+  if (!req.membership) return next(unauthorized("You are not in a team"));
+  if (req.membership.teamRole !== "CAPTAIN") return next(unauthorized("Only the team captain can do that"));
+  next();
 }
 
 /** Loads the caller's team membership if authenticated; rejection is left to route guards. */
@@ -65,7 +83,7 @@ export async function loadMembership(req: Request, _res: Response, next: NextFun
   try {
     if (!req.user || req.membership) return next();
     const m = await prisma.teamMember.findUnique({ where: { userId: req.user.id } });
-    req.membership = m ? { teamId: m.teamId, isCaptain: m.isCaptain } : undefined;
+    req.membership = m ? { teamId: m.teamId, teamRole: m.teamRole } : undefined;
     next();
   } catch (err) {
     next(err);
