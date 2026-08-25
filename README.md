@@ -94,6 +94,15 @@ The suite resets the demo event via the admin API and walks the journey as a rea
 
 See `.env.example`. Key ones: `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET` (generate: `openssl rand -hex 48`), `BACKEND_PORT`, `CORS_ORIGIN`, storage driver (`local` | `s3`), optional `SENTRY_DSN`. Never commit real credentials.
 
+## Authentication & roles
+
+Public registration always creates a **Participant** — the server assigns the role
+and client-supplied role values are ignored (no role selector exists). Team
+captains are team-level (`TeamMember.teamRole`), granted to the team creator or by
+admin promotion. Mentors join only through single-use admin invitations
+(`/invite/<token>`); Admin accounts are seeded/provisioned manually and can never
+be self-registered. Full model + permission matrix: `docs/authentication.md`.
+
 ## Documentation
 
 - `docs/architecture.md` — system design, data flows, security model
