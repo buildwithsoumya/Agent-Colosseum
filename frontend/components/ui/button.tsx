@@ -2,15 +2,21 @@ import { clsx } from "@/lib/clsx";
 
 import * as React from "react";
 
-type Variant = "primary" | "outline" | "ghost" | "danger" | "accentSoft";
+type Variant = "primary" | "outline" | "ghost" | "danger" | "accentSoft" | "good";
 type Size = "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-ink text-white hover:bg-black disabled:bg-neutral-300",
-  outline: "border border-line bg-white text-ink hover:border-ink transition-colors",
-  ghost: "text-ink-soft hover:text-ink hover:bg-paper-dim",
-  danger: "bg-bad text-white hover:opacity-90",
-  accentSoft: "bg-accent-soft text-accent-strong hover:brightness-[0.98]",
+  // Solid purple, sharp corners, subtle glow — no gradients
+  primary:
+    "bg-accent text-white hover:bg-accent-strong btn-glow disabled:bg-ink-faint disabled:shadow-none",
+  // Transparent + 1px #18181B border; border shifts to accent on hover
+  outline:
+    "border border-line bg-transparent text-ink hover:border-accent hover:text-white hover:bg-white/5 transition-colors",
+  ghost: "text-ink-soft hover:text-ink hover:bg-module-raised",
+  danger: "bg-bad text-void hover:opacity-90",
+  accentSoft:
+    "bg-accent-soft text-accent-strong border border-accent/30 hover:bg-accent/20",
+  good: "bg-good text-void hover:brightness-110",
 };
 
 const sizes: Record<Size, string> = {
@@ -28,7 +34,7 @@ export function Button({
   return (
     <button
       className={clsx(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-medium tracking-tight",
+        "inline-flex items-center justify-center gap-2 rounded-[0.25rem] font-mono text-xs font-medium uppercase tracking-[0.1em]",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         "disabled:pointer-events-none disabled:opacity-60",
         variants[variant],

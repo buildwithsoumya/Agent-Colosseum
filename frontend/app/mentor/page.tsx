@@ -59,38 +59,57 @@ export default function MentorPage() {
   }
 
   if (loading || !user || user.role === "PARTICIPANT") {
-    return <div className="grid min-h-screen place-items-center"><p className="text-sm text-ink-soft">Checking credentials…</p></div>;
+    return (
+      <div className="grid min-h-screen place-items-center tech-grid">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-soft">
+          <span className="mr-2 text-accent">&gt;</span> Checking credentials…
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-paper-dim">
-      <header className="border-b border-line bg-white">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+    <div className="min-h-screen tech-grid">
+      <header className="sticky top-0 z-40 border-b border-line bg-void/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 max-w-[1280px] items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="grid h-7 w-7 place-items-center rounded-md bg-ink text-[13px] font-black text-white">A</span>
-              <span className="text-sm font-bold tracking-tight">Mentor Desk</span>
+            <Link href="/" className="flex items-center gap-2.5">
+              <span className="grid h-7 w-7 place-items-center border border-accent/40 bg-module font-mono text-[12px] font-bold text-accent">
+                A
+              </span>
+              <span className="font-display text-sm font-bold tracking-tighter">
+                MENTOR<span className="text-accent">DESK</span>
+              </span>
             </Link>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-ink-soft">{user.name}</span>
-            <button onClick={() => logout().then(() => router.push("/"))} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold hover:border-ink">
+            <span className="hidden font-mono text-[11px] uppercase tracking-wider text-ink-soft sm:block">
+              {user.name}
+            </span>
+            <button
+              onClick={() => logout().then(() => router.push("/"))}
+              className="rounded-[0.125rem] border border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-soft transition-colors hover:border-bad hover:text-bad"
+            >
               Log out
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-4 px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-[1280px] space-y-4 px-4 py-6 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-xl font-bold tracking-tight">Problem statement review</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-ink">
+            Problem statement review
+          </h1>
           <div className="flex flex-wrap gap-1.5">
             {FILTERS.map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  filter === f ? "bg-accent text-white" : "bg-white text-ink-soft ring-1 ring-line hover:text-ink"
+                className={`rounded-[0.125rem] px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                  filter === f
+                    ? "bg-accent text-white"
+                    : "border border-line bg-module text-ink-soft hover:text-ink"
                 }`}
               >
                 {f.replace("_", " ")}
@@ -100,24 +119,32 @@ export default function MentorPage() {
         </div>
 
         {rows.length === 0 && (
-          <Card><CardContent><p className="py-6 text-center text-sm text-ink-soft">Nothing in the {filter.replace("_", " ").toLowerCase()} queue.</p></CardContent></Card>
+          <Card>
+            <CardContent>
+              <p className="py-6 text-center font-mono text-[11px] uppercase tracking-wider text-ink-soft">
+                Nothing in the {filter.replace("_", " ").toLowerCase()} queue.
+              </p>
+            </CardContent>
+          </Card>
         )}
 
         {rows.map((r) => (
-          <Card key={r.id}>
+          <Card key={r.id} className="coord-frame">
             <CardHeader className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <div className="flex items-center gap-2">
                   <CardTitle>{r.title}</CardTitle>
-                  <Badge tone={r.status === "APPROVED" ? "good" : r.status === "SUBMITTED" ? "accent" : "neutral"}>{r.status.replace("_", " ")}</Badge>
+                  <Badge tone={r.status === "APPROVED" ? "good" : r.status === "SUBMITTED" ? "accent" : "neutral"}>
+                    {r.status.replace("_", " ")}
+                  </Badge>
                 </div>
-                <p className="mt-0.5 text-xs text-ink-soft">
+                <p className="mt-0.5 font-mono text-[11px] uppercase tracking-wider text-ink-soft">
                   Team {r.team.name} ({r.team.code}) · track {r.track.name}
                 </p>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm leading-relaxed">{r.body}</p>
+              <p className="text-sm leading-relaxed text-ink">{r.body}</p>
               {!["APPROVED"].includes(r.status) && (
                 <>
                   <Textarea
@@ -126,7 +153,7 @@ export default function MentorPage() {
                     onChange={(e) => setNotes((n) => ({ ...n, [r.id]: e.target.value }))}
                   />
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" onClick={() => review(r.id, "APPROVE")} className="bg-good hover:bg-green-800">
+                    <Button size="sm" variant="good" onClick={() => review(r.id, "APPROVE")}>
                       Approve
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => review(r.id, "REQUEST_CHANGES")}>

@@ -9,7 +9,7 @@ export function Card({
   return (
     <div
       className={clsx(
-        "rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]",
+        "module rounded-[0.25rem]",
         className,
       )}
       {...props}
@@ -18,13 +18,24 @@ export function Card({
 }
 
 export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={clsx("border-b border-line px-5 py-4", className)} {...props} />;
+  return (
+    <div
+      className={clsx(
+        "flex items-center justify-between border-b border-line px-5 py-4",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={clsx("text-sm font-semibold tracking-tight text-ink", className)}
+      className={clsx(
+        "font-mono text-xs font-medium uppercase tracking-[0.1em] text-ink",
+        className,
+      )}
       {...props}
     />
   );

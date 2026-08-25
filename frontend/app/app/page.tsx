@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Stat } from "@/components/ui/stat";
 import { Badge } from "@/components/ui/badge";
 import { CreditsWidget } from "@/components/event/credits-widget";
-import { PHASE_META } from "@ac/shared";
 
 interface Tx {
   id: string;
@@ -97,12 +96,14 @@ export default function ParticipantDashboard() {
       <Card>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Current objective</p>
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
+              [ OBJ ] Current objective
+            </p>
             <p className="mt-1 text-sm text-ink">{eventState.objective}</p>
           </div>
           <Link
             href={objectiveLink.href}
-            className="inline-flex h-10 shrink-0 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-strong"
+            className="btn-glow inline-flex h-10 shrink-0 items-center rounded-[0.25rem] bg-accent px-4 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-accent-strong"
           >
             {objectiveLink.label} →
           </Link>
@@ -111,26 +112,32 @@ export default function ParticipantDashboard() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader className="flex items-center justify-between">
+          <CardHeader>
             <CardTitle>Recent transactions</CardTitle>
-            <Link href="/app/wallet" className="text-xs font-semibold text-accent hover:text-accent-strong">
+            <Link href="/app/wallet" className="font-mono text-[11px] uppercase tracking-wider text-accent hover:text-accent-strong">
               Full wallet →
             </Link>
           </CardHeader>
           <CardContent className="p-0">
             {txs.length === 0 ? (
-              <p className="px-5 py-8 text-center text-xs text-ink-soft">No credits moved yet.</p>
+              <p className="px-5 py-8 text-center font-mono text-[11px] uppercase tracking-wider text-ink-soft">
+                No credits moved yet.
+              </p>
             ) : (
               <ul className="divide-y divide-line">
                 {txs.map((t) => (
                   <li key={t.id} className="flex items-center justify-between px-5 py-2.5">
                     <div className="min-w-0">
-                      <p className="truncate text-[13px] font-medium">{t.source}</p>
-                      <p className="text-[11px] text-neutral-400">
+                      <p className="truncate text-[13px] font-medium text-ink">{t.source}</p>
+                      <p className="font-mono text-[10px] uppercase tracking-wider text-ink-faint">
                         {new Date(t.createdAt).toLocaleTimeString()} · balance {formatCC(t.balanceAfter)}
                       </p>
                     </div>
-                    <span className={`ml-3 shrink-0 font-mono text-sm font-bold tabular-nums ${t.amount >= 0 ? "text-good" : "text-bad"}`}>
+                    <span
+                      className={`ml-3 shrink-0 font-mono text-sm font-bold tabular-nums ${
+                        t.amount >= 0 ? "text-good" : "text-bad"
+                      }`}
+                    >
                       {t.amount >= 0 ? "+" : ""}
                       {t.amount}
                     </span>
@@ -155,14 +162,14 @@ export default function ParticipantDashboard() {
               <Link
                 key={label as string}
                 href={href as string}
-                className="flex items-center justify-between rounded-xl border border-line px-4 py-2.5 transition-colors hover:border-violet-300"
+                className="module module-hover flex items-center justify-between px-4 py-2.5"
               >
-                <span className="text-[13px] font-medium">{label as string}</span>
+                <span className="text-[13px] font-medium text-ink">{label as string}</span>
                 <Badge tone={open ? "good" : "neutral"}>{open ? "OPEN" : "CLOSED"}</Badge>
               </Link>
             ))}
-            <div className="flex items-center justify-between rounded-xl border border-line px-4 py-2.5">
-              <span className="text-[13px] font-medium">Submission</span>
+            <div className="module flex items-center justify-between px-4 py-2.5">
+              <span className="text-[13px] font-medium text-ink">Submission</span>
               <Badge tone={submission === "EVALUATED" ? "good" : submission && submission !== "OPEN" ? "accent" : "neutral"}>
                 {submission ?? "NONE"}
               </Badge>

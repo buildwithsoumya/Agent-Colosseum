@@ -10,9 +10,9 @@ export const Input = React.forwardRef<
     <input
       ref={ref}
       className={clsx(
-        "h-10 w-full rounded-lg border border-line bg-white px-3 text-sm text-ink",
-        "placeholder:text-neutral-400 focus:border-accent focus:outline-none",
-        "focus:ring-2 focus:ring-accent/15 transition-shadow",
+        "h-10 w-full rounded-[0.125rem] border border-line bg-void px-3 text-sm text-ink",
+        "placeholder:text-ink-faint focus:border-accent focus:outline-none input-glow",
+        "transition-shadow",
         className,
       )}
       {...props}
@@ -28,9 +28,9 @@ export const Textarea = React.forwardRef<
     <textarea
       ref={ref}
       className={clsx(
-        "w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink",
-        "placeholder:text-neutral-400 focus:border-accent focus:outline-none",
-        "focus:ring-2 focus:ring-accent/15 transition-shadow min-h-[96px]",
+        "w-full rounded-[0.125rem] border border-line bg-void px-3 py-2 text-sm text-ink",
+        "placeholder:text-ink-faint focus:border-accent focus:outline-none input-glow",
+        "transition-shadow min-h-[96px]",
         className,
       )}
       {...props}

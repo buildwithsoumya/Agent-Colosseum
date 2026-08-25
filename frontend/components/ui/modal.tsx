@@ -25,14 +25,15 @@ export function Modal({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-4 backdrop-blur-[2px] sm:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center"
+          style={{ backdropFilter: "blur(20px)", backgroundColor: "rgba(10,10,10,0.8)" }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
         >
           <motion.div
-            className={clsx("w-full max-w-lg rounded-2xl border border-line bg-white shadow-xl")}
+            className={clsx("w-full max-w-lg border border-line bg-module coord-frame")}
             initial={{ y: 16, opacity: 0, scale: 0.98 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 12, opacity: 0, scale: 0.98 }}
@@ -40,10 +41,12 @@ export function Modal({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-line px-5 py-4">
-              <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+              <h3 className="font-mono text-xs font-medium uppercase tracking-[0.1em] text-ink">
+                {title}
+              </h3>
               <button
                 onClick={onClose}
-                className="rounded-md p-1 text-ink-soft transition-colors hover:bg-paper-dim hover:text-ink"
+                className="rounded-md p-1 text-ink-soft transition-colors hover:bg-module-raised hover:text-ink"
                 aria-label="Close"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
