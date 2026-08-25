@@ -20,8 +20,10 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [registered, setRegistered] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -33,8 +35,12 @@ export default function LoginPage() {
         const user = await login(email, password);
         router.push(user.role === "ADMIN" ? "/admin" : user.role === "MENTOR" ? "/mentor" : "/app");
       } else {
-        await register(name, email, password);
-        router.push("/app/team");
+        if (password !== confirmPassword) {
+          setError("Passwords do not match");
+          return;
+        }
+        await register(name, email, password, confirmPassword);
+        setRegistered(true);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -76,21 +82,46 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form onSubmit={submit} className="mt-8 space-y-3.5">
-            {mode === "register" && (
-              <Input placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} />
-            )}
-            <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
-            <Input type="password" placeholder="Password (min 8 characters)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete={mode === "login" ? "current-password" : "new-password"} />
-            {error && (
-              <p className="border border-bad/40 bg-bad-soft px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-bad">
-                [ ERROR ] {error}
+          {registered ? (
+            <div className="module border-accent/40 px-5 py-6 text-center">
+              <p className="font-display text-lg font-bold text-good">Account created successfully.</p>
+              <p className="mt-2 text-sm text-ink">
+                You&apos;re registered as a <span className="font-semibold text-accent">Participant</span>. You can form
+                a team next.
               </p>
-            )}
-            <Button type="submit" disabled={busy} className="w-full">
-              {busy ? "…" : mode === "login" ? "Log in" : "Create account"}
-            </Button>
-          </form>
+              <button
+                onClick={() => router.push("/app/team")}
+                className="mt-5 w-full rounded-[0.125rem] bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-wider text-void transition-colors hover:bg-accent-strong"
+              >
+                Create or join a team →
+              </button>
+              <button
+                onClick={() => router.push("/app")}
+                className="mt-2 w-full rounded-[0.125rem] border border-line px-4 py-2.5 font-mono text-[10px] uppercase tracking-wider text-ink-soft transition-colors hover:text-ink"
+              >
+                Go to my dashboard
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={submit} className="mt-8 space-y-3.5">
+              {mode === "register" && (
+                <Input placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} />
+              )}
+              <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+              <Input type="password" placeholder="Password (min 8 characters)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete={mode === "login" ? "current-password" : "new-password"} />
+              {mode === "register" && (
+                <Input type="password" placeholder="Confirm password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
+              )}
+              {error && (
+                <p className="border border-bad/40 bg-bad-soft px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-bad">
+                  [ ERROR ] {error}
+                </p>
+              )}
+              <Button type="submit" disabled={busy} className="w-full">
+                {busy ? "…" : mode === "login" ? "Log in" : "Create account"}
+              </Button>
+            </form>
+          )}
 
           <p className="mt-4 text-center font-mono text-[11px] uppercase tracking-wider text-ink-soft">
             {mode === "login" ? (

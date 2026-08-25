@@ -24,7 +24,7 @@ interface TeamRow {
   code: string;
   creditBalance: number;
   track: { name: string } | null;
-  members: Array<{ user: { name: string }; isCaptain: boolean }>;
+  members: Array<{ user: { name: string }; teamRole: "MEMBER" | "CAPTAIN" }>;
   problemStatements: Array<{ status: string }>;
   submissions: Array<{ status: string }>;
 }
@@ -129,6 +129,9 @@ export default function AdminPage() {
             </Link>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/admin/users" className="font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-soft hover:text-accent">
+              Users
+            </Link>
             <Link href="/spectator" className="font-mono text-[11px] font-semibold uppercase tracking-wider text-accent hover:text-accent-strong">
               Stage view →
             </Link>

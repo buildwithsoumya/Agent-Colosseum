@@ -6,11 +6,18 @@ import type { PublicUser } from "@ac/shared";
 
 interface SessionValue {
   user: PublicUser | null;
-  team: { id: string; name: string; isCaptain: boolean } | null;
+  team: { id: string; name: string; isCaptain: boolean; teamRole: "MEMBER" | "CAPTAIN" | null } | null;
   loading: boolean;
   refresh: () => Promise<void>;
   login: (email: string, password: string) => Promise<PublicUser>;
-  register: (name: string, email: string, password: string) => Promise<PublicUser>;
+  register: (name: string, email: string, password: string, confirmPassword: string) => Promise<PublicUser>;
+  registerInvitation: (args: {
+    name: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    invitationToken: string;
+  }) => Promise<{ user: PublicUser; teamRole: string | null }>;
   logout: () => Promise<void>;
 }
 
@@ -49,10 +56,26 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         await refresh();
         return data.user;
       },
-      async register(name, email, password) {
-        const data = await api.post<{ user: PublicUser }>("/api/auth/register", { name, email, password });
+      async register(name, email, password, confirmPassword) {
+        const data = await api.post<{ user: PublicUser }>("/api/auth/register", {
+          name,
+          email,
+          password,
+          confirmPassword,
+        });
         await refresh();
         return data.user;
+      },
+      async registerInvitation({ name, email, password, confirmPassword, invitationToken }) {
+        const data = await api.post<{ user: PublicUser; teamRole: string | null }>("/api/auth/register/invitation", {
+          name,
+          email,
+          password,
+          confirmPassword,
+          invitationToken,
+        });
+        await refresh();
+        return data;
       },
       async logout() {
         await api.post("/api/auth/logout");
