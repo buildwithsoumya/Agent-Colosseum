@@ -2,8 +2,21 @@ import { z } from "zod";
 
 /* ---------------------------------- roles --------------------------------- */
 
+/** Global application role. Never assigned by public registration. */
 export const Role = z.enum(["ADMIN", "MENTOR", "PARTICIPANT", "SPECTATOR"]);
 export type Role = z.infer<typeof Role>;
+
+/** Roles that are permitted via an admin-issued invitation. ADMIN is never inviteable. */
+export const InvitedRole = z.enum(["MENTOR", "CAPTAIN"]);
+export type InvitedRole = z.infer<typeof InvitedRole>;
+
+/** Team-level role, separate from the user's global application role. */
+export const TeamRole = z.enum(["MEMBER", "CAPTAIN"]);
+export type TeamRole = z.infer<typeof TeamRole>;
+
+/** Whether a user account is usable. Deactivated users cannot authenticate. */
+export const UserStatus = z.enum(["ACTIVE", "DEACTIVATED"]);
+export type UserStatus = z.infer<typeof UserStatus>;
 
 /* ---------------------------------- phases -------------------------------- */
 
@@ -193,12 +206,32 @@ export interface ApiError {
 
 /* -------------------------------- auth payloads ---------------------------- */
 
-export const RegisterInput = z.object({
-  name: z.string().min(2).max(80),
-  email: z.string().email(),
-  password: z.string().min(8).max(128),
-});
+export const RegisterInput = z
+  .object({
+    name: z.string().min(2).max(80),
+    email: z.string().email(),
+    password: z.string().min(8).max(128),
+    confirmPassword: z.string().min(8).max(128).optional(),
+  })
+  .refine((d) => !d.confirmPassword || d.confirmPassword === d.password, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 export type RegisterInput = z.infer<typeof RegisterInput>;
+
+export const InvitationRegisterInput = z
+  .object({
+    name: z.string().min(2).max(80),
+    email: z.string().email(),
+    password: z.string().min(8).max(128),
+    confirmPassword: z.string().min(8).max(128),
+    invitationToken: z.string().min(16),
+  })
+  .refine((d) => d.confirmPassword === d.password, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+export type InvitationRegisterInput = z.infer<typeof InvitationRegisterInput>;
 
 export const LoginInput = z.object({
   email: z.string().email(),
@@ -211,4 +244,5 @@ export interface PublicUser {
   email: string;
   name: string;
   role: Role;
+  status: UserStatus;
 }
