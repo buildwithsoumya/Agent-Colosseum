@@ -39,19 +39,28 @@ const FAQS: Array<{ q: string; a: string; id?: string }> = [
 
 export default function FaqPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen tech-grid">
       <SiteNav />
       <main className="mx-auto max-w-4xl px-4 py-14 sm:px-6">
         <SectionLabel>FAQ</SectionLabel>
-        <PageTitle sub="Everything participants usually ask before the doors open.">Questions, answered</PageTitle>
-        <div className="mt-10 divide-y divide-line rounded-2xl border border-line bg-white">
-          {FAQS.map((f) => (
-            <details key={f.q} id={f.id} className="group px-6 py-5 open:bg-paper-dim/50">
-              <summary className="cursor-pointer list-none text-sm font-semibold tracking-tight text-ink marker:hidden">
-                <span className="mr-2 inline-block text-accent transition-transform group-open:rotate-90">›</span>
-                {f.q}
+        <PageTitle sub="Everything participants usually ask before the doors open.">
+          Questions, answered
+        </PageTitle>
+        <div className="mt-10 border border-line bg-module">
+          {FAQS.map((f, i) => (
+            <details
+              key={f.q}
+              id={f.id}
+              className="group border-b border-line px-6 py-5 last:border-b-0 open:bg-module-raised/60"
+            >
+              <summary className="flex cursor-pointer list-none items-center gap-3 font-display text-sm font-semibold tracking-tight text-ink marker:hidden">
+                <span className="grid h-6 w-6 shrink-0 place-items-center border border-line font-mono text-[10px] text-accent">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="flex-1">{f.q}</span>
+                <span className="font-mono text-accent transition-transform group-open:rotate-90">+</span>
               </summary>
-              <p className="mt-2 pl-5 text-[13px] leading-relaxed text-ink-soft">{f.a}</p>
+              <p className="mt-3 pl-9 text-[13px] leading-relaxed text-ink-soft">{f.a}</p>
             </details>
           ))}
         </div>

@@ -25,6 +25,12 @@ const CATEGORY_LABEL = {
   OFFENSIVE_SABOTAGE: "Offensive Sabotage",
 } as const;
 
+const CATEGORY_INDEX = {
+  TOOL_MODULE: "01-T",
+  DEFENSIVE_BUFF: "02-D",
+  OFFENSIVE_SABOTAGE: "03-O",
+} as const;
+
 export default function StorePage() {
   const [features, setFeatures] = useState<FeatureRow[]>([]);
   const [rivals, setRivals] = useState<Array<{ id: string; name: string }>>([]);
@@ -36,11 +42,9 @@ export default function StorePage() {
 
   const load = useCallback(async () => {
     try {
-      const [store, teamList] = await Promise.all([
+      const [store] = await Promise.all([
         api.get<{ features: FeatureRow[]; gates: Record<string, boolean>; rivals?: Array<{ id: string; name: string }> }>("/api/store?rivals=1"),
-        api.get<{ teams?: never }>("/api/teams"),
       ]);
-      void teamList;
       setFeatures(store.features);
       setStoreOpen(Boolean(store.gates.storeOpen));
       if (store.rivals) setRivals(store.rivals);
@@ -75,16 +79,19 @@ export default function StorePage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       {!storeOpen && (
-        <p className="rounded-xl border border-line bg-paper-dim px-4 py-3 text-sm text-ink-soft">
-          The Feature Store is closed — it opens in Phase 1 and stays open through Phase 2.
-        </p>
+        <div className="module border-l-2 border-l-warn px-4 py-3">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-warn">
+            The Feature Store is closed — it opens in Phase 1 and stays open through Phase 2.
+          </p>
+        </div>
       )}
 
       {(["TOOL_MODULE", "DEFENSIVE_BUFF", "OFFENSIVE_SABOTAGE"] as const).map((cat) => (
         <div key={cat}>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+          <h2 className="mb-3 flex items-center gap-2 border-b border-line pb-2 font-mono text-xs font-medium uppercase tracking-[0.14em] text-ink">
+            <span className="text-accent">{cat === "TOOL_MODULE" ? "▣" : cat === "DEFENSIVE_BUFF" ? "◈" : "⚡"}</span>
             {CATEGORY_LABEL[cat]}
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -92,10 +99,12 @@ export default function StorePage() {
               .filter((f) => f.category === cat)
               .map((f) => (
                 <motion.div key={f.id} layout>
-                  <Card className="flex h-full flex-col">
+                  <Card className="module-hover coord-frame flex h-full flex-col">
                     <CardHeader className="flex items-start justify-between gap-2">
                       <CardTitle className="leading-snug">{f.name}</CardTitle>
-                      <span className="shrink-0 font-mono text-sm font-bold text-accent tabular-nums">{f.cost}</span>
+                      <span className="shrink-0 font-mono text-sm font-bold text-warn tabular-nums">
+                        {f.cost} CC
+                      </span>
                     </CardHeader>
                     <CardContent className="flex flex-1 flex-col justify-between gap-3">
                       <p className="text-[13px] leading-relaxed text-ink-soft">{f.description}</p>
@@ -103,7 +112,9 @@ export default function StorePage() {
                         {f.ownedByTeam >= f.maxPerTeam ? (
                           <Badge tone="good">Owned</Badge>
                         ) : (
-                          <span className="text-[11px] text-neutral-400">max {f.maxPerTeam}/team</span>
+                          <span className="font-mono text-[10px] uppercase tracking-wider text-ink-faint">
+                            max {f.maxPerTeam}/team
+                          </span>
                         )}
                         <Button
                           size="sm"
@@ -125,22 +136,29 @@ export default function StorePage() {
         </div>
       ))}
 
-      {message && <p className="rounded-lg border border-violet-200 bg-accent-soft px-4 py-2.5 text-sm font-medium text-accent-strong">{message}</p>}
+      {message && (
+        <p className="border border-accent/40 bg-accent/10 px-4 py-2.5 font-mono text-[11px] uppercase tracking-wider text-accent-strong">
+          [ SYS ] {message}
+        </p>
+      )}
 
-      <Modal open={Boolean(open)} onClose={() => setOpen(null)} title={open ? `Buy ${open.name}` : ""}>
+      <Modal open={Boolean(open)} onClose={() => setOpen(null)} title={open ? `Acquire: ${open.name.toUpperCase()}` : ""}>
         {open && (
           <div className="space-y-4">
             <p className="text-sm text-ink-soft">{open.description}</p>
-            <p className="rounded-lg bg-paper-dim px-3 py-2 font-mono text-sm font-bold tabular-nums">
-              −{open.cost} CC from your balance
-            </p>
+            <div className="flex items-center justify-between border border-line bg-void px-3 py-2">
+              <span className="font-mono text-[11px] uppercase tracking-wider text-ink-soft">Cost</span>
+              <span className="font-mono text-sm font-bold text-warn tabular-nums">−{open.cost} CC</span>
+            </div>
             {open.category === "OFFENSIVE_SABOTAGE" && (
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wider text-ink-soft">Target rival</label>
+                <label className="font-mono text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+                  Target rival
+                </label>
                 <select
                   value={targetId}
                   onChange={(e) => setTargetId(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-lg border border-line bg-white px-3 text-sm focus:border-accent focus:outline-none"
+                  className="mt-1 h-10 w-full rounded-[0.125rem] border border-line bg-void px-3 text-sm text-ink focus:border-accent focus:outline-none input-glow"
                 >
                   <option value="">Select a rival team…</option>
                   {rivals.map((r) => (
@@ -154,9 +172,10 @@ export default function StorePage() {
             <Button
               onClick={purchase}
               disabled={open.category === "OFFENSIVE_SABOTAGE" && !targetId}
-              className={`w-full ${open.category === "OFFENSIVE_SABOTAGE" ? "bg-bad hover:bg-red-800" : "bg-accent hover:bg-accent-strong"}`}
+              variant={open.category === "OFFENSIVE_SABOTAGE" ? "danger" : "primary"}
+              className="w-full"
             >
-              Confirm purchase
+              Authorize purchase
             </Button>
           </div>
         )}

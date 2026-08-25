@@ -19,14 +19,14 @@ const LINKS = [
 export function SiteNav() {
   const [open, setOpen] = useState(false);
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-white/85 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="grid h-7 w-7 place-items-center rounded-md bg-ink text-[13px] font-black text-white">
+    <header className="sticky top-0 z-40 border-b border-line bg-void/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-14 max-w-[1280px] items-center justify-between px-4 sm:px-6">
+        <Link href="/" className="flex items-center gap-2.5">
+          <span className="grid h-7 w-7 place-items-center border border-line bg-module font-mono text-[12px] font-bold text-accent">
             A
           </span>
-          <span className="text-sm font-bold tracking-tight">
-            Agent<span className="text-accent">Colosseum</span>
+          <span className="font-display text-sm font-bold tracking-tighter text-ink">
+            AGENT<span className="text-accent">COLOSSEUM</span>
           </span>
         </Link>
 
@@ -36,8 +36,8 @@ export function SiteNav() {
               key={l.href}
               href={l.href}
               className={clsx(
-                "rounded-md px-2.5 py-1.5 text-[13px] font-medium text-ink-soft transition-colors",
-                "hover:bg-paper-dim hover:text-ink",
+                "rounded-[0.125rem] px-2.5 py-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-soft transition-colors",
+                "hover:bg-module-raised hover:text-accent",
               )}
             >
               {l.label}
@@ -48,7 +48,7 @@ export function SiteNav() {
         <div className="flex items-center gap-2">
           <Link
             href="/login"
-            className="hidden rounded-lg bg-ink px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-black sm:inline-flex"
+            className="hidden rounded-[0.125rem] bg-accent px-3.5 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-accent-strong sm:inline-flex btn-glow"
           >
             Enter the Arena
           </Link>
@@ -64,14 +64,14 @@ export function SiteNav() {
         </div>
       </div>
       {open && (
-        <nav className="border-t border-line bg-white px-4 py-3 lg:hidden">
+        <nav className="border-t border-line bg-void px-4 py-3 lg:hidden">
           <div className="grid grid-cols-2 gap-1">
             {LINKS.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="rounded-md px-3 py-2 text-sm font-medium text-ink-soft hover:bg-paper-dim"
+                className="rounded-md px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-ink-soft hover:bg-module-raised"
               >
                 {l.label}
               </Link>
@@ -85,18 +85,26 @@ export function SiteNav() {
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-line bg-paper-dim">
-      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <div>
-          <p className="text-sm font-bold tracking-tight">
-            Agent<span className="text-accent">Colosseum</span>
-          </p>
-          <p className="mt-1 text-xs text-ink-soft">
-            Build the agent. Spend the credits. Survive the Gauntlet.
-          </p>
+    <footer className="mt-20 border-t border-line bg-module">
+      <div className="mx-auto flex max-w-[1280px] flex-col items-center gap-6 px-4 py-12 sm:px-6">
+        <div className="flex items-center gap-2 font-display text-lg font-bold tracking-tight text-ink">
+          <span className="grid h-8 w-8 place-items-center border border-line bg-void font-mono text-sm text-accent">
+            A
+          </span>
+          AGENT COLOSSEUM
         </div>
-        <p className="text-xs text-neutral-400">
-          Event platform demo · PRD v2 implementation
+        <div className="flex flex-wrap justify-center gap-6">
+          {["Technical Documentation", "Terminal Access", "Security Protocols", "Privacy"].map((label) => (
+            <span
+              key={label}
+              className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-ink-faint transition-colors hover:text-ink"
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-faint">
+          © 2026 AGENT COLOSSEUM · SYSTEM VERSION 2.4.0
         </p>
       </div>
     </footer>

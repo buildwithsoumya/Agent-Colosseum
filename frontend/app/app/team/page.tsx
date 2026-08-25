@@ -115,7 +115,7 @@ export default function TeamPage() {
           <CardHeader><CardTitle>Create a team</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <Input placeholder="Team name" value={teamName} onChange={(e) => setTeamName(e.target.value)} />
-            <Button onClick={createTeam} disabled={teamName.length < 2} className="w-full bg-accent hover:bg-accent-strong">
+            <Button onClick={createTeam} disabled={teamName.length < 2} className="w-full">
               Create team (you become captain)
             </Button>
           </CardContent>
@@ -129,7 +129,7 @@ export default function TeamPage() {
             </Button>
           </CardContent>
         </Card>
-        {error && <p className="lg:col-span-2 text-xs text-bad">{error}</p>}
+        {error && <p className="lg:col-span-2 font-mono text-[11px] uppercase tracking-wider text-bad">[ ERROR ] {error}</p>}
       </div>
     );
   }
@@ -144,7 +144,10 @@ export default function TeamPage() {
           <CardTitle>{data.team.name}</CardTitle>
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs text-ink-soft">
-              invite code <span className="rounded bg-paper-dim px-1.5 py-0.5 font-bold tracking-[0.15em]">{data.team.code}</span>
+              invite code{" "}
+              <span className="border border-line bg-void px-1.5 py-0.5 font-bold tracking-[0.15em] text-accent">
+                {data.team.code}
+              </span>
             </span>
           </div>
         </CardHeader>
@@ -152,7 +155,10 @@ export default function TeamPage() {
           <ul className="divide-y divide-line">
             {data.team.members.map((m) => (
               <li key={m.user.id} className="flex items-center justify-between py-2">
-                <span className="text-sm font-medium">{m.user.name}</span>
+                <span className="flex items-center gap-2 text-sm font-medium text-ink">
+                  <span className="h-1.5 w-1.5 bg-accent" />
+                  {m.user.name}
+                </span>
                 {m.isCaptain && <Badge tone="accent">Captain</Badge>}
               </li>
             ))}
@@ -160,16 +166,18 @@ export default function TeamPage() {
 
           {!data.team.track && (
             <div className="mt-4 border-t border-line pt-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">Captain: choose a track</p>
+              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
+                Captain: choose a track
+              </p>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {tracks.map((t) => (
                   <button
                     key={t.key}
                     disabled={!phaseAllowsTrack || !data.isCaptain}
                     onClick={() => selectTrack(t.key)}
-                    className="rounded-xl border border-line px-4 py-3 text-left transition-colors hover:border-violet-300 disabled:pointer-events-none disabled:opacity-50"
+                    className="module module-hover px-4 py-3 text-left disabled:pointer-events-none disabled:opacity-40"
                   >
-                    <p className="text-sm font-semibold">{t.name}</p>
+                    <p className="text-sm font-semibold text-ink">{t.name}</p>
                     <p className="mt-0.5 line-clamp-2 text-xs text-ink-soft">{t.description}</p>
                   </button>
                 ))}
@@ -177,7 +185,7 @@ export default function TeamPage() {
             </div>
           )}
           {data.team.track && (
-            <p className="mt-3 text-sm">
+            <p className="mt-3 text-sm text-ink">
               Track: <Badge tone="ink">{data.team.track.name}</Badge>
             </p>
           )}
@@ -194,7 +202,11 @@ export default function TeamPage() {
           )}
         </CardHeader>
         <CardContent className="space-y-3">
-          {mentorNote && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Mentor note: {mentorNote}</p>}
+          {mentorNote && (
+            <p className="border border-warn/40 bg-warn-soft px-3 py-2 text-xs text-warn">
+              [ MENTOR NOTE ] {mentorNote}
+            </p>
+          )}
           <Input
             placeholder="Problem statement title"
             value={psTitle}
@@ -214,15 +226,18 @@ export default function TeamPage() {
             <Button
               onClick={saveAndSubmitPs}
               disabled={!editable || psTitle.length < 4 || psBody.length < 20}
-              className="bg-accent hover:bg-accent-strong"
             >
               {psStatus === "REJECTED" || psStatus === "CHANGES_REQUESTED" ? "Revise & resubmit" : "Submit for approval"}
             </Button>
-            {psStatus === "SUBMITTED" && <p className="self-center text-xs text-ink-soft">Waiting for mentor review…</p>}
+            {psStatus === "SUBMITTED" && (
+              <p className="self-center font-mono text-[11px] uppercase tracking-wider text-ink-soft">
+                Waiting for mentor review…
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
-      {error && <p className="text-xs text-bad">{error}</p>}
+      {error && <p className="font-mono text-[11px] uppercase tracking-wider text-bad">[ ERROR ] {error}</p>}
     </div>
   );
 }

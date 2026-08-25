@@ -36,9 +36,9 @@ const STEPS = [
 
 export default function HowItWorksPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen tech-grid">
       <SiteNav />
-      <main className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+      <main className="mx-auto max-w-[1280px] px-4 py-14 sm:px-6">
         <SectionLabel>How it works</SectionLabel>
         <PageTitle sub="The full journey from empty repo to podium, in six steps.">
           From 1,000 CC to the Gauntlet
@@ -46,22 +46,26 @@ export default function HowItWorksPage() {
 
         <div className="mt-12 space-y-4">
           {STEPS.map((s) => (
-            <div key={s.n} className="flex gap-5 rounded-2xl border border-line bg-white p-6">
-              <span className="font-mono text-sm font-bold text-accent">{s.n}</span>
+            <div key={s.n} className="module module-hover flex items-start gap-5 p-6">
+              <span className="grid h-10 w-10 shrink-0 place-items-center border border-line bg-void font-mono text-sm font-bold text-accent">
+                {s.n}
+              </span>
               <div>
-                <h3 className="text-base font-semibold tracking-tight">{s.title}</h3>
+                <h3 className="font-display text-base font-semibold tracking-tight text-ink">{s.title}</h3>
                 <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-ink-soft">{s.body}</p>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-10 rounded-2xl bg-accent-soft p-6">
-          <h3 className="text-sm font-bold tracking-tight text-accent-strong">The master formula</h3>
-          <p className="mt-2 font-mono text-sm font-semibold text-ink">
+        <div className="mt-10 border border-accent/30 bg-accent/5 p-6">
+          <h3 className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+            The master formula
+          </h3>
+          <p className="mt-3 font-mono text-sm font-semibold text-ink">
             Final Score = (Gauntlet Points × Casino Multiplier) + Credit Discipline Score
           </p>
-          <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-ink-soft">
+          <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-ink-soft">
             Gauntlet is worth up to 1,000 points. Credit discipline adds up to 150 points based on how
             close your final balance lands to the 100 CC threshold. See{" "}
             <a href="/faq#scoring" className="font-semibold text-accent hover:text-accent-strong">

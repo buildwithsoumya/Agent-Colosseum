@@ -105,29 +105,44 @@ export default function AdminPage() {
   }
 
   if (loading || !user || user.role !== "ADMIN") {
-    return <div className="grid min-h-screen place-items-center"><p className="text-sm text-ink-soft">Checking credentials…</p></div>;
+    return (
+      <div className="grid min-h-screen place-items-center tech-grid">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-soft">
+          <span className="mr-2 text-accent">&gt;</span> Checking credentials…
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-paper-dim">
-      <header className="border-b border-line bg-white">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
+    <div className="min-h-screen tech-grid">
+      <header className="sticky top-0 z-40 border-b border-line bg-void/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 max-w-[1280px] items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="grid h-7 w-7 place-items-center rounded-md bg-accent text-[13px] font-black text-white">A</span>
-              <span className="text-sm font-bold tracking-tight">Control Center</span>
+            <Link href="/" className="flex items-center gap-2.5">
+              <span className="grid h-7 w-7 place-items-center border border-accent/40 bg-module font-mono text-[12px] font-bold text-accent">
+                A
+              </span>
+              <span className="font-display text-sm font-bold tracking-tighter">
+                CONTROL<span className="text-accent">CENTER</span>
+              </span>
             </Link>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/spectator" className="text-xs font-semibold text-accent hover:text-accent-strong">Stage view →</Link>
-            <button onClick={() => logout().then(() => router.push("/"))} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold hover:border-ink">
+            <Link href="/spectator" className="font-mono text-[11px] font-semibold uppercase tracking-wider text-accent hover:text-accent-strong">
+              Stage view →
+            </Link>
+            <button
+              onClick={() => logout().then(() => router.push("/"))}
+              className="rounded-[0.125rem] border border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-soft transition-colors hover:border-bad hover:text-bad"
+            >
               Log out
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-[1280px] space-y-5 px-4 py-6 sm:px-6">
         {overview && (
           <>
             {/* Phase control */}
@@ -137,12 +152,12 @@ export default function AdminPage() {
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div>
-                      <p className="font-mono text-4xl font-black tabular-nums">
+                      <p className="font-mono text-4xl font-black tabular-nums text-ink">
                         {seconds >= 0 ? `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}` : "--:--"}
                       </p>
-                      <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-neutral-400">phase timer</p>
+                      <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-ink-faint">phase timer</p>
                     </div>
-                    <div>
+                    <div className="flex items-center gap-2">
                       <Badge tone="accent">{overview.phase.phase}</Badge>
                       <Badge tone={overview.phase.status === "RUNNING" ? "good" : overview.phase.status === "PAUSED" ? "warn" : "neutral"}>
                         {overview.phase.status}
@@ -181,9 +196,9 @@ export default function AdminPage() {
                 ["Arena runs", overview.stats.arenaRuns],
                 ["Casino bets", overview.stats.casinoBets],
               ].map(([l, v]) => (
-                <div key={l as string} className="rounded-xl border border-line bg-white px-4 py-3">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-ink-soft">{l as string}</p>
-                  <p className="mt-1 font-mono text-xl font-bold tabular-nums">{v as number}</p>
+                <div key={l as string} className="module px-4 py-3">
+                  <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-ink-soft">{l as string}</p>
+                  <p className="mt-1 font-mono text-xl font-bold tabular-nums text-ink">{v as number}</p>
                 </div>
               ))}
             </div>
@@ -195,14 +210,17 @@ export default function AdminPage() {
                 <CardContent className="p-0">
                   <ul className="max-h-72 divide-y divide-line overflow-y-auto">
                     {teams.map((t) => (
-                      <li key={t.id} className="flex items-center justify-between gap-2 px-4 py-2">
+                      <li key={t.id} className="flex items-center justify-between gap-2 px-4 py-2 transition-colors hover:bg-module">
                         <div className="min-w-0">
-                          <p className="truncate text-[13px] font-medium">{t.name} <span className="ml-1 font-mono text-[10px] text-neutral-400">{t.code}</span></p>
-                          <p className="truncate text-[11px] text-neutral-400">
+                          <p className="truncate text-[13px] font-medium text-ink">
+                            {t.name}{" "}
+                            <span className="ml-1 font-mono text-[10px] text-ink-faint">{t.code}</span>
+                          </p>
+                          <p className="truncate font-mono text-[10px] uppercase tracking-wider text-ink-faint">
                             {t.track?.name ?? "no track"} · PS {t.problemStatements[0]?.status ?? "—"} · sub {t.submissions[0]?.status ?? "—"}
                           </p>
                         </div>
-                        <span className="shrink-0 font-mono text-sm font-bold tabular-nums">{t.creditBalance}</span>
+                        <span className="shrink-0 font-mono text-sm font-bold tabular-nums text-ink">{t.creditBalance}</span>
                       </li>
                     ))}
                   </ul>
@@ -210,7 +228,7 @@ export default function AdminPage() {
                     <select
                       value={adjust.teamId}
                       onChange={(e) => setAdjust((a) => ({ ...a, teamId: e.target.value }))}
-                      className="h-9 min-w-0 flex-1 rounded-lg border border-line bg-white px-2 text-xs focus:border-accent focus:outline-none"
+                      className="h-9 min-w-0 flex-1 rounded-[0.125rem] border border-line bg-void px-2 text-xs text-ink focus:border-accent focus:outline-none"
                     >
                       <option value="">Team…</option>
                       {teams.map((t) => (
@@ -242,16 +260,22 @@ export default function AdminPage() {
                 <CardHeader><CardTitle>Gauntlet monitor</CardTitle></CardHeader>
                 <CardContent className="p-0">
                   {overview.jobs.length === 0 ? (
-                    <p className="px-5 py-8 text-center text-xs text-ink-soft">No evaluation jobs yet.</p>
+                    <p className="px-5 py-8 text-center font-mono text-[11px] uppercase tracking-wider text-ink-soft">
+                      No evaluation jobs yet.
+                    </p>
                   ) : (
                     <ul className="max-h-72 divide-y divide-line overflow-y-auto">
                       {overview.jobs.map((j) => (
-                        <li key={j.jobId} className="flex items-center justify-between px-4 py-2">
-                          <span className="text-[13px] font-medium">{j.teamName}</span>
+                        <li key={j.jobId} className="flex items-center justify-between px-4 py-2 transition-colors hover:bg-module">
+                          <span className="text-[13px] font-medium text-ink">{j.teamName}</span>
                           <span className="flex items-center gap-2">
-                            {j.payloadsPassed && <span className="text-[11px] text-ink-soft tabular-nums">{j.payloadsPassed}</span>}
+                            {j.payloadsPassed && (
+                              <span className="font-mono text-[11px] text-ink-soft tabular-nums">{j.payloadsPassed}</span>
+                            )}
                             <Badge tone={j.status === "COMPLETED" ? "good" : j.status === "FAILED" ? "bad" : "accent"}>{j.status}</Badge>
-                            {j.gauntletScore !== null && <span className="font-mono text-sm font-bold tabular-nums">{j.gauntletScore}</span>}
+                            {j.gauntletScore !== null && (
+                              <span className="font-mono text-sm font-bold tabular-nums text-ink">{j.gauntletScore}</span>
+                            )}
                           </span>
                         </li>
                       ))}
@@ -267,15 +291,17 @@ export default function AdminPage() {
               <CardContent className="p-0">
                 <ul className="max-h-56 divide-y divide-line overflow-y-auto">
                   {overview.audit.map((a) => (
-                    <li key={a.id} className="flex items-center justify-between gap-3 px-4 py-2">
+                    <li key={a.id} className="flex items-center justify-between gap-3 px-4 py-2 transition-colors hover:bg-module">
                       <span className="min-w-0 truncate text-[12px]">
                         <span className="font-mono font-semibold text-accent-strong">{a.action}</span>
                         <span className="ml-2 text-ink-soft">{a.actorEmail ?? "system"}</span>
                         {a.detail && Object.keys(a.detail).length > 0 && (
-                          <span className="ml-2 font-mono text-[10px] text-neutral-400">{JSON.stringify(a.detail).slice(0, 90)}</span>
+                          <span className="ml-2 font-mono text-[10px] text-ink-faint">{JSON.stringify(a.detail).slice(0, 90)}</span>
                         )}
                       </span>
-                      <span className="shrink-0 text-[10px] text-neutral-400">{new Date(a.createdAt).toLocaleTimeString()}</span>
+                      <span className="shrink-0 font-mono text-[10px] text-ink-faint">
+                        {new Date(a.createdAt).toLocaleTimeString()}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -283,7 +309,11 @@ export default function AdminPage() {
             </Card>
           </>
         )}
-        {message && <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-bad">{message}</p>}
+        {message && (
+          <p className="border border-bad/40 bg-bad-soft px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-bad">
+            [ ERROR ] {message}
+          </p>
+        )}
       </main>
     </div>
   );

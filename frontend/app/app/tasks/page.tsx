@@ -59,15 +59,17 @@ export default function TasksPage() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-ink-soft">
-        Every team in a track gets the same two tasks. Unlocking Task 1 costs credits; Task 2 unlocks free
-        when it is revealed.
-      </p>
+      <div className="module border-l-2 border-l-accent px-4 py-3">
+        <p className="font-mono text-[11px] uppercase tracking-wider text-ink-soft">
+          Every team in a track gets the same two tasks. Unlocking Task 1 costs credits; Task 2 unlocks
+          free when it is revealed.
+        </p>
+      </div>
       {tasks.length === 0 && !message && (
         <Card><CardContent><p className="text-sm text-ink-soft">Select a track first — see Team.</p></CardContent></Card>
       )}
       {tasks.map((t) => (
-        <Card key={t.id}>
+        <Card key={t.id} className="coord-frame">
           <CardHeader className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
               <CardTitle>{t.title}</CardTitle>
@@ -85,7 +87,7 @@ export default function TasksPage() {
               <ul className="mt-3 space-y-1 border-t border-line pt-3">
                 {(t.criteria as string[]).map((c) => (
                   <li key={c} className="flex gap-2 text-xs text-ink-soft">
-                    <span className="mt-0.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
+                    <span className="mt-0.5 h-1 w-1 shrink-0 bg-accent" />
                     {c}
                   </li>
                 ))}
@@ -94,7 +96,11 @@ export default function TasksPage() {
           </CardContent>
         </Card>
       ))}
-      {message && <p className="text-xs font-medium text-accent-strong">{message}</p>}
+      {message && (
+        <p className="border border-accent/40 bg-accent/10 px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-accent-strong">
+          [ SYS ] {message}
+        </p>
+      )}
     </div>
   );
 }
