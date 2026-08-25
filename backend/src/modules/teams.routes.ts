@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { conflict, forbidden, notFound, unprocessable } from "../lib/errors.js";
 import { prisma } from "../lib/prisma.js";
 import { inviteCode } from "../lib/rng.js";
@@ -21,11 +22,25 @@ const teamSelect = {
   trackId: true,
   track: { select: { key: true, name: true } },
   members: {
-    select: { isCaptain: true, joinedAt: true, user: { select: { id: true, name: true, email: true } } },
+    select: { teamRole: true, joinedAt: true, user: { select: { id: true, name: true, email: true } } },
     orderBy: { joinedAt: "asc" as const },
   },
   problemStatements: { select: { status: true, title: true } },
 } as const;
+
+type TeamWithMembers = Prisma.TeamGetPayload<{ select: typeof teamSelect }>;
+
+/** Converts the persisted teamRole to the wire-friendly isCaptain flag the UI already consumes. */
+function serialize(team: TeamWithMembers) {
+  return {
+    ...team,
+    members: team.members.map((m) => ({
+      user: m.user,
+      joinedAt: m.joinedAt,
+      isCaptain: m.teamRole === "CAPTAIN",
+    })),
+  };
+}
 
 teamsRouter.post(
   "/",
@@ -43,7 +58,7 @@ teamsRouter.post(
         data: {
           name: (req.body as { name: string }).name,
           code,
-          members: { create: { userId: req.user!.id, isCaptain: true } },
+          members: { create: { userId: req.user!.id, teamRole: "CAPTAIN" } },
         },
       });
       // opening balance lands immediately on team creation during an active event
@@ -62,7 +77,7 @@ teamsRouter.post(
 
     await recordActivity("TEAM", `Team "${team.name}" entered the arena`);
     const full = await prisma.team.findUniqueOrThrow({ where: { id: team.id }, select: teamSelect });
-    res.status(201).json({ team: full });
+    res.status(201).json({ team: serialize(full) });
   }),
 );
 
@@ -84,7 +99,7 @@ teamsRouter.post(
 
     await prisma.teamMember.create({ data: { teamId: team.id, userId: req.user.id } });
     const full = await prisma.team.findUniqueOrThrow({ where: { id: team.id }, select: teamSelect });
-    res.json({ team: full });
+    res.json({ team: serialize(full) });
   }),
 );
 
@@ -96,7 +111,7 @@ teamsRouter.get(
       where: { id: req.membership!.teamId },
       select: teamSelect,
     });
-    res.json({ team, isCaptain: req.membership!.isCaptain });
+    res.json({ team: serialize(team), isCaptain: req.membership!.isCaptain });
   }),
 );
 

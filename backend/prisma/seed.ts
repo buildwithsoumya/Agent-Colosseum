@@ -332,7 +332,7 @@ async function main() {
       const existingMember = await prisma.teamMember.findUnique({ where: { userId: u.id } });
       if (!existingMember) {
         await prisma.teamMember.create({
-          data: { teamId: team!.id, userId: u.id, isCaptain: i === 0 },
+          data: { teamId: team!.id, userId: u.id, teamRole: i === 0 ? "CAPTAIN" : "MEMBER" },
         });
       }
     }

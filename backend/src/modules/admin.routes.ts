@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { badRequest, notFound, unprocessable } from "../lib/errors.js";
+import { badRequest, conflict, forbidden, notFound, unprocessable } from "../lib/errors.js";
 import { prisma } from "../lib/prisma.js";
 import { requireRole } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
@@ -19,7 +19,9 @@ import {
 import { applyLedgerEntry, inCreditTransaction, announceBalance } from "../services/credits.js";
 import { logAdminAction } from "../services/audit.js";
 import { gauntletOverview } from "../services/gauntlet.js";
+import { createInvitation } from "../services/invitations.js";
 import { env } from "../config/env.js";
+import { InvitedRole, type Role } from "@ac/shared";
 
 export const adminRouter = Router();
 adminRouter.use(requireRole("ADMIN"));
@@ -176,7 +178,7 @@ adminRouter.get(
         code: true,
         creditBalance: true,
         track: { select: { name: true } },
-        members: { select: { user: { select: { name: true, email: true } }, isCaptain: true } },
+        members: { select: { userId: true, user: { select: { name: true, email: true, role: true } }, teamRole: true } },
         problemStatements: { select: { title: true, status: true } },
         submissions: { select: { status: true, repoUrl: true } },
         casinoBets: { select: { tier: true, outcome: true } },
@@ -216,5 +218,156 @@ adminRouter.get(
   asyncHandler(async (_req, res) => {
     const actions = await prisma.adminAction.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
     res.json({ actions });
+  }),
+);
+
+/* ------------------------------------------------------------- users & roles */
+
+adminRouter.get(
+  "/users",
+  asyncHandler(async (_req, res) => {
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        memberships: {
+          select: { teamId: true, teamRole: true, team: { select: { name: true } } },
+        },
+      },
+    });
+    res.json({
+      users: users.map((u) => {
+        const mem = u.memberships[0];
+        return {
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          globalRole: u.role,
+          status: u.status,
+          createdAt: u.createdAt,
+          team: mem ? { id: mem.teamId, name: mem.team.name, teamRole: mem.teamRole } : null,
+        };
+      }),
+    });
+  }),
+);
+
+/** Issues a privileged-role invitation (MENTOR or team CAPTAIN). ADMIN is never inviteable. */
+adminRouter.post(
+  "/invitations",
+  actionLimiter,
+  validate(z.object({ email: z.string().email(), role: InvitedRole, teamId: z.string().optional() })),
+  asyncHandler(async (req, res) => {
+    const { email, role, teamId } = req.body as { email: string; role: "MENTOR" | "CAPTAIN"; teamId?: string };
+
+    if (role === "CAPTAIN") {
+      if (!teamId) throw badRequest("A team is required for a captain invitation");
+      const team = await prisma.team.findUnique({ where: { id: teamId } });
+      if (!team) throw notFound("Team not found");
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (existingUser) throw conflict("A user with that email already exists");
+
+    const inv = await createInvitation({ email, role, teamId, createdById: req.user!.id });
+    void logAdminAction(req.user!.id, `invitation.${role.toLowerCase()}`, "user", email, { teamId: teamId ?? null });
+
+    res.status(201).json({ invitation: { email, role, link: inv.link, expiresAt: inv.expiresAt } });
+  }),
+);
+
+/** Deactivates a user (immediately blocks new sessions; existing sessions are ignored at auth). */
+adminRouter.post(
+  "/users/:id/deactivate",
+  asyncHandler(async (req, res) => {
+    const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!target) throw notFound("User not found");
+    if (target.id === req.user!.id) throw forbidden("You cannot deactivate your own account");
+    await prisma.user.update({ where: { id: target.id }, data: { status: "DEACTIVATED" } });
+    await prisma.session.deleteMany({ where: { userId: target.id } });
+    void logAdminAction(req.user!.id, "user.deactivate", "user", target.id, { email: target.email });
+    res.json({ ok: true });
+  }),
+);
+
+adminRouter.post(
+  "/users/:id/activate",
+  asyncHandler(async (req, res) => {
+    const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!target) throw notFound("User not found");
+    await prisma.user.update({ where: { id: target.id }, data: { status: "ACTIVE" } });
+    void logAdminAction(req.user!.id, "user.activate", "user", target.id, { email: target.email });
+    res.json({ ok: true });
+  }),
+);
+
+/** Changes a user's global role to one the server permits. Escalation to ADMIN is restricted. */
+adminRouter.post(
+  "/users/:id/role",
+  validate(z.object({ role: z.enum(["ADMIN", "MENTOR", "PARTICIPANT"]) })),
+  asyncHandler(async (req, res) => {
+    const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!target) throw notFound("User not found");
+    if (target.id === req.user!.id) throw forbidden("You cannot change your own role");
+
+    const next = (req.body as { role: Role }).role;
+    // Prevent the last admin from being demoted away from retaining an admin.
+    const remainingAdmins = await prisma.user.count({ where: { role: "ADMIN", status: "ACTIVE" } });
+    if (target.role === "ADMIN" && next !== "ADMIN" && remainingAdmins <= 1) {
+      throw badRequest("Refusing to demote the last active admin");
+    }
+
+    await prisma.user.update({ where: { id: target.id }, data: { role: next } });
+    // Role changed → invalidate the user's existing sessions so claims refresh.
+    await prisma.session.deleteMany({ where: { userId: target.id } });
+    void logAdminAction(req.user!.id, "user.role", "user", target.id, { from: target.role, to: next });
+    res.json({ ok: true });
+  }),
+);
+
+/** Assigns a member of the team as its captain (demoting any existing captain). */
+adminRouter.post(
+  "/teams/:teamId/captain",
+  validate(z.object({ userId: z.string() })),
+  asyncHandler(async (req, res) => {
+    const { teamId } = req.params;
+    if (!teamId) throw badRequest("Missing team id");
+    const team = await prisma.team.findUnique({ where: { id: teamId } });
+    if (!team) throw notFound("Team not found");
+
+    const membership = await prisma.teamMember.findUnique({
+      where: { userId: (req.body as { userId: string }).userId },
+    });
+    if (!membership || membership.teamId !== teamId) throw badRequest("That user is not a member of this team");
+
+    await prisma.$transaction([
+      prisma.teamMember.updateMany({ where: { teamId, teamRole: "CAPTAIN" }, data: { teamRole: "MEMBER" } }),
+      prisma.teamMember.update({ where: { userId: membership.userId }, data: { teamRole: "CAPTAIN" } }),
+    ]);
+    void logAdminAction(req.user!.id, "team.set_captain", "team", teamId, {
+      userId: membership.userId,
+      teamRole: "CAPTAIN",
+    });
+    res.json({ ok: true });
+  }),
+);
+
+/** Removes the team captain, leaving all members as plain MEMBERs. */
+adminRouter.delete(
+  "/teams/:teamId/captain",
+  asyncHandler(async (req, res) => {
+    const { teamId } = req.params;
+    if (!teamId) throw badRequest("Missing team id");
+    const team = await prisma.team.findUnique({ where: { id: teamId } });
+    if (!team) throw notFound("Team not found");
+
+    await prisma.teamMember.updateMany({ where: { teamId, teamRole: "CAPTAIN" }, data: { teamRole: "MEMBER" } });
+    void logAdminAction(req.user!.id, "team.clear_captain", "team", teamId);
+    res.json({ ok: true });
   }),
 );

@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
-import type { Role } from "@ac/shared";
+import type { Role, TeamRole, UserStatus } from "@ac/shared";
 import { prisma } from "../lib/prisma.js";
 import { sha256 } from "../lib/rng.js";
-import { unauthorized } from "../lib/errors.js";
+import { forbidden, unauthorized } from "../lib/errors.js";
 
 export const SESSION_COOKIE = "ac_session";
 
@@ -11,6 +11,14 @@ export interface AuthUser {
   email: string;
   name: string;
   role: Role;
+  status: UserStatus;
+}
+
+export interface Membership {
+  teamId: string;
+  teamRole: TeamRole;
+  /** Convenience flag: whether this membership is a team captain. */
+  isCaptain: boolean;
 }
 
 declare global {
@@ -18,7 +26,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthUser;
-      membership?: { teamId: string; isCaptain: boolean };
+      membership?: Membership;
     }
   }
 }
@@ -35,11 +43,15 @@ export async function authOptional(req: Request, _res: Response, next: NextFunct
     });
     if (!session || session.expiresAt < new Date()) return next();
 
+    // Deactivated users cannot use the platform regardless of session validity.
+    if (session.user.status === "DEACTIVATED") return next();
+
     req.user = {
       id: session.user.id,
       email: session.user.email,
       name: session.user.name,
       role: session.user.role,
+      status: session.user.status,
     };
     return next();
   } catch (err) {
@@ -50,6 +62,11 @@ export async function authOptional(req: Request, _res: Response, next: NextFunct
 export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
   if (!req.user) return next(unauthorized());
   next();
+}
+
+/** Alias keeping the "global role" mental model explicit; same check as requireRole. */
+export function requireGlobalRole(...roles: Role[]) {
+  return requireRole(...roles);
 }
 
 export function requireRole(...roles: Role[]) {
@@ -65,7 +82,9 @@ export async function loadMembership(req: Request, _res: Response, next: NextFun
   try {
     if (!req.user || req.membership) return next();
     const m = await prisma.teamMember.findUnique({ where: { userId: req.user.id } });
-    req.membership = m ? { teamId: m.teamId, isCaptain: m.isCaptain } : undefined;
+    req.membership = m
+      ? { teamId: m.teamId, teamRole: m.teamRole, isCaptain: m.teamRole === "CAPTAIN" }
+      : undefined;
     next();
   } catch (err) {
     next(err);
@@ -75,5 +94,13 @@ export async function loadMembership(req: Request, _res: Response, next: NextFun
 export function requireTeam(req: Request, _res: Response, next: NextFunction): void {
   if (!req.user) return next(unauthorized());
   if (!req.membership) return next(unauthorized("You are not in a team yet"));
+  next();
+}
+
+/** Requires the caller to be the captain of the team in `req.membership`. */
+export function requireTeamCaptain(req: Request, _res: Response, next: NextFunction): void {
+  if (!req.user) return next(unauthorized());
+  if (!req.membership) return next(unauthorized("You are not in a team yet"));
+  if (!req.membership.isCaptain) return next(forbidden("Only the team captain can do this"));
   next();
 }
