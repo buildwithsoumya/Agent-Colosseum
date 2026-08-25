@@ -1,0 +1,6 @@
+# Normalize line endings — this repo is edited from both WSL/Linux and Windows.
+* text=auto eol=lf
+*.png binary
+*.pdf binary
+*.docx binary
+*.ico binary
