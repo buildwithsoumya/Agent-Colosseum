@@ -33,5 +33,22 @@ if (!cmd) {
   process.exit(1);
 }
 
-const result = spawnSync(cmd, args, { stdio: "inherit", env: process.env });
+if (!fs.existsSync(envFile)) {
+  console.error(
+    "\n[with-env] No root .env file found.",
+    "\n  Fix: copy .env.example to .env at the repository root, then re-run this command.",
+    "\n       (Windows PowerShell: Copy-Item .env.example .env)",
+    "\n",
+  );
+}
+
+// Windows resolves CLI shims (.cmd) only through the shell; Unix spawns directly.
+const result = spawnSync(cmd, args, {
+  stdio: "inherit",
+  env: process.env,
+  shell: process.platform === "win32",
+});
+if (result.error) {
+  console.error(`\n[with-env] failed to launch "${cmd}":`, result.error.message, "\n");
+}
 process.exit(result.status ?? 1);

@@ -7,8 +7,12 @@
   "engines": {
     "node": ">=20"
   },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "concurrently": "^9.1.0"
+  },
   "scripts": {
-    "dev": "pnpm --filter @ac/backend dev & pnpm --filter @ac/frontend dev & wait",
+    "dev": "concurrently -n backend,frontend -c blue,magenta \"pnpm --filter @ac/backend dev\" \"pnpm --filter @ac/frontend dev\"",
     "dev:frontend": "pnpm --filter @ac/frontend dev",
     "dev:backend": "pnpm --filter @ac/backend dev",
     "dev:evaluator": "pnpm --filter @ac/evaluator dev",
@@ -22,9 +26,7 @@
     "db:seed": "pnpm --filter @ac/backend db:seed",
     "db:studio": "pnpm --filter @ac/backend db:studio",
     "infra:up": "docker compose up -d postgres redis",
-    "infra:down": "docker compose down"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.49.1"
+    "infra:down": "docker compose down",
+    "postinstall": "pnpm --filter @ac/shared build && pnpm --filter @ac/backend db:generate"
   }
 }
