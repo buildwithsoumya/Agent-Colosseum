@@ -46,7 +46,7 @@ export default function MentorPage() {
   useEffect(() => {
     if (loading) return;
     if (!user) router.replace("/login");
-    else if (user.role === "PARTICIPANT") router.replace("/app");
+    else if (user.globalRole === "PARTICIPANT") router.replace("/app");
   }, [user, loading, router]);
 
   async function review(id: string, decision: "APPROVE" | "REJECT" | "REQUEST_CHANGES") {
@@ -58,7 +58,7 @@ export default function MentorPage() {
     }
   }
 
-  if (loading || !user || user.role === "PARTICIPANT") {
+  if (loading || !user || user.globalRole === "PARTICIPANT") {
     return <div className="grid min-h-screen place-items-center"><p className="text-sm text-ink-soft">Checking credentials…</p></div>;
   }
 

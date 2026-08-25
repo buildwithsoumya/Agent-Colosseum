@@ -16,10 +16,10 @@ interface TeamData {
     code: string;
     creditBalance: number;
     track: { key: string; name: string } | null;
-    members: Array<{ isCaptain: boolean; user: { id: string; name: string; email: string } }>;
+    members: Array<{ teamRole: "MEMBER" | "CAPTAIN"; user: { id: string; name: string; email: string } }>;
     problemStatements: Array<{ status: string; title: string }>;
   };
-  isCaptain: boolean;
+  teamRole: "MEMBER" | "CAPTAIN";
 }
 
 interface TrackOption {
@@ -134,6 +134,7 @@ export default function TeamPage() {
     );
   }
 
+  const isCaptain = data.teamRole === "CAPTAIN";
   const editable = !psStatus || ["DRAFT", "REJECTED", "CHANGES_REQUESTED"].includes(psStatus);
   const phaseAllowsTrack = true;
 
@@ -153,7 +154,7 @@ export default function TeamPage() {
             {data.team.members.map((m) => (
               <li key={m.user.id} className="flex items-center justify-between py-2">
                 <span className="text-sm font-medium">{m.user.name}</span>
-                {m.isCaptain && <Badge tone="accent">Captain</Badge>}
+                <Badge tone={m.teamRole === "CAPTAIN" ? "accent" : "neutral"}>{m.teamRole}</Badge>
               </li>
             ))}
           </ul>
@@ -165,7 +166,7 @@ export default function TeamPage() {
                 {tracks.map((t) => (
                   <button
                     key={t.key}
-                    disabled={!phaseAllowsTrack || !data.isCaptain}
+                    disabled={!phaseAllowsTrack || data.teamRole !== "CAPTAIN"}
                     onClick={() => selectTrack(t.key)}
                     className="rounded-xl border border-line px-4 py-3 text-left transition-colors hover:border-violet-300 disabled:pointer-events-none disabled:opacity-50"
                   >

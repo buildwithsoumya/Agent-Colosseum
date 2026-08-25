@@ -6,7 +6,7 @@ import type { PublicUser } from "@ac/shared";
 
 interface SessionValue {
   user: PublicUser | null;
-  team: { id: string; name: string; isCaptain: boolean } | null;
+  team: { id: string; name: string; teamRole: "MEMBER" | "CAPTAIN" } | null;
   loading: boolean;
   refresh: () => Promise<void>;
   login: (email: string, password: string) => Promise<PublicUser>;
