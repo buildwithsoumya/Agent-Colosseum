@@ -27,6 +27,7 @@
     "db:studio": "pnpm --filter @ac/backend db:studio",
     "infra:up": "docker compose up -d postgres redis",
     "infra:down": "docker compose down",
-    "postinstall": "pnpm --filter @ac/shared build && pnpm --filter @ac/backend db:generate"
+    "postinstall": "pnpm --filter @ac/shared build && pnpm --filter @ac/backend db:generate",
+    "stop": "node scripts/stop-dev.mjs"
   }
 }

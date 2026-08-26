@@ -43,6 +43,7 @@ npm run db:migrate            # applies committed migrations
 npm run db:seed               # demo event, tracks, users, store, payloads
 
 npm run dev                   # backend :4000 + frontend :3000 (+ evaluator in another terminal)
+npm run stop                  # free the dev ports if something is stuck (cross-platform)
 npm run dev:evaluator         # gauntlet worker (required for Phase 4 evaluation)
 ```
 
