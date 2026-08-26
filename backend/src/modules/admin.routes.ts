@@ -20,6 +20,7 @@ import { applyLedgerEntry, inCreditTransaction, announceBalance } from "../servi
 import { logAdminAction } from "../services/audit.js";
 import { gauntletOverview } from "../services/gauntlet.js";
 import { createInvitation } from "../services/invitations.js";
+import { regenerateJoinCode } from "../services/teams.js";
 import { env } from "../config/env.js";
 import { InvitedRole, type Role } from "@ac/shared";
 
@@ -110,7 +111,7 @@ adminRouter.get(
       where: status ? { status: status as never } : undefined,
       orderBy: { updatedAt: "desc" },
       include: {
-        team: { select: { name: true, code: true } },
+        team: { select: { name: true } },
         track: { select: { key: true, name: true } },
       },
     });
@@ -165,6 +166,19 @@ adminRouter.post(
   }),
 );
 
+/** Admin team management: regenerate a team's join code on behalf of the captain. */
+adminRouter.post(
+  "/teams/:teamId/regenerate-code",
+  actionLimiter,
+  asyncHandler(async (req, res) => {
+    const teamId2 = req.params.teamId;
+    if (!teamId2) throw badRequest("Missing team id");
+    const result = await prisma.$transaction((tx) => regenerateJoinCode(tx, teamId2));
+    void logAdminAction(req.user!.id, "admin.team.regenerate_code", "team", teamId2);
+    res.json({ ok: true, joinCode: result.joinCode });
+  }),
+);
+
 /* ---------------------------------------------------------------- monitoring */
 
 adminRouter.get(
@@ -175,7 +189,7 @@ adminRouter.get(
       select: {
         id: true,
         name: true,
-        code: true,
+        joinCodeUpdatedAt: true,
         creditBalance: true,
         track: { select: { name: true } },
         members: { select: { userId: true, user: { select: { name: true, email: true, role: true } }, teamRole: true } },

@@ -59,9 +59,11 @@ model Session {
 // ---------------------------------------------------------------- teams
 
 model Team {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  code          String   @unique // invite code
+  id            String    @id @default(cuid())
+  name          String    @unique
+  joinCodeHash  String    @unique // sha256 of the normalized join code; raw code never stored
+  joinCodeCipher String // AES-encrypted so captains can re-display their code
+  joinCodeUpdatedAt DateTime @default(now())
   trackId       String?
   track         Track?   @relation(fields: [trackId], references: [id])
   creditBalance Int      @default(0) // cache, always written with CreditTransaction inside a DB tx
