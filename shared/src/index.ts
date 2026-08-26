@@ -143,6 +143,9 @@ export type CasinoOutcome = z.infer<typeof CasinoOutcome>;
 /** Tunable economy/casino/scoring knobs. PRD values; PRD marks figures as configurable. */
 export const GameConfigSchema = z.object({
   openingBalanceCc: z.number().int().default(1000),
+  maxTeamSize: z.number().int().min(2).max(10).default(4),
+  /** Last phase in which teams may be created/joined (PRD: onboarding). */
+  teamJoinLastPhase: z.enum(["SETUP", "PHASE_0", "PHASE_1", "PHASE_2", "PHASE_3", "PHASE_4"]).default("PHASE_0"),
   taskUnlockCostCc: z.number().int().default(40),
   arenaMaxRunsPerTeam: z.number().int().default(4),
   arenaPayoutCc: z.number().int().default(150),
@@ -164,6 +167,7 @@ export const GameConfigSchema = z.object({
     })
     .default({ accuracy: 0.4, resilience: 0.25, latency: 0.2, tokens: 0.15 }),
 });
+
 export type GameConfig = z.infer<typeof GameConfigSchema>;
 
 export const DEFAULT_GAME_CONFIG: GameConfig = GameConfigSchema.parse({});
@@ -190,6 +194,7 @@ export const SocketEvent = {
   SubmissionUpdated: "submission:updated",
   GauntletProgress: "gauntlet:progress",
   GauntletCompleted: "gauntlet:completed",
+  TeamMemberJoined: "team:member_joined",
   AnnouncementNew: "announcement:new",
   ActivityNew: "activity:new",
 } as const;

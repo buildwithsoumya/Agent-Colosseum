@@ -134,11 +134,11 @@ describe.skipIf(!run)("auth & role registration", () => {
     await register("team-maker");
     const team = await req("POST", "/api/teams", { body: { name: `Team ${RUN_ID}` }, auth: true });
     expect(team.status).toBe(201);
-    const member = team.json.team.members.find((m: any) => m.isCaptain);
+    const member = team.json.team.members.find((m: any) => m.teamRole === "CAPTAIN");
     expect(member.user.email).toBe(email("team-maker"));
 
     const me = await req("GET", "/api/teams/me", { auth: true });
-    expect(me.json.isCaptain).toBe(true);
+    expect(me.json.teamRole).toBe("CAPTAIN");
 
     // captain's global role stays PARTICIPANT and admin is blocked
     const session = await req("GET", "/api/auth/me", { auth: true });
