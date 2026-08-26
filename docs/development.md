@@ -168,3 +168,36 @@ The suite resets the event through the admin API first, so it always starts from
 
 Admin portal → *reset-demo* (dev only) wipes runtime state (transactions, bets, submissions,
 scores, announcements) while keeping users/teams/catalogue. Full re-seed: drop DB, migrate, seed.
+
+## Role-based dashboards
+
+### Routing
+
+| Route | Area | Guard layers |
+|-------|------|--------------|
+| `/admin` (+ `/admin/users`) | Admin console | edge middleware → `RequireRole(["ADMIN"])` → backend `requireRole("ADMIN")` |
+| `/mentor` | Mentor desk | edge middleware → `RequireRole(["MENTOR","ADMIN"])` → backend mentor/admin checks |
+| `/app` | Participant dashboard (preserved convention; `/dashboard` is middleware-aliased only) | edge middleware → `RequireRole(["PARTICIPANT"])` |
+
+Anonymous visits to any protected area are redirected by `frontend/middleware.ts`
+to `/login?next=<path>`; after login `resolveDestination` honours `next`.
+
+### Captain vs member
+
+Captaincy is team-level (`TeamMember.teamRole`). The participant shell shows a
+**CAPTAIN** badge from `/api/auth/me` (`team.teamRole`); the Team page gates
+captain-only actions (track selection) and renders member/captain rows. Members
+see identical navigation minus those controls.
+
+### Server vs client authorization split
+
+- **Backend = authority.** Every privileged API re-verifies role server-side
+  (`requireRole`, invitation/registration guards). Hidden buttons are not security.
+- **Client = UX layer.** `RequireRole({ roles })` resolves `/api/auth/me` before
+  rendering (no wrong-dashboard flash), shows a loading state while resolving,
+  and renders the `AccessRestricted` 403 page for authenticated users whose role
+  is not allowed — including when a wrong-role URL is typed directly.
+- **Middleware = edge gate.** Only checks session-cookie presence (never roles)
+  so unauthenticated traffic never reaches a dashboard shell.
+
+No OAuth/Google flow exists — registration + admin invitations only (out of scope).
