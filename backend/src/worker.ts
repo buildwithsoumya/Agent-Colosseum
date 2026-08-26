@@ -138,14 +138,22 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
   const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3000").split(",");
   app.use("*", async (c, next) => {
     const origin = c.req.header("Origin");
+    // CORS preflight must answer 2xx or browsers refuse the real request.
+    if (c.req.method === "OPTIONS") {
+      c.res = new Response(null, { status: 204 });
+      if (origin && allowedOrigins.includes(origin)) {
+        c.res.headers.set("Access-Control-Allow-Origin", origin);
+        c.res.headers.set("Access-Control-Allow-Credentials", "true");
+        c.res.headers.set("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
+        c.res.headers.set("Access-Control-Allow-Headers", "Content-Type");
+        c.res.headers.set("Access-Control-Max-Age", "86400");
+      }
+      return;
+    }
     await next();
     if (origin && allowedOrigins.includes(origin)) {
       c.header("Access-Control-Allow-Origin", origin);
       c.header("Access-Control-Allow-Credentials", "true");
-      if (c.req.method === "OPTIONS") {
-        c.header("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE");
-        c.header("Access-Control-Allow-Headers", "Content-Type");
-      }
     }
   });
 
@@ -185,8 +193,8 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
       data: { name, email: emailAddr, passwordHash: await bcrypt.hash(password, 10), role: "PARTICIPANT" },
     });
     setCookie(c, SESSION_COOKIE, await issueSession(user.id), {
-      httpOnly: true, sameSite: "Lax", path: "/", maxAge: SESSION_TTL_MS / 1000,
-      secure: true,
+      httpOnly: true, sameSite: "None", path: "/", maxAge: SESSION_TTL_MS / 1000,
+      secure: true, // api and web live on different workers.dev subdomains = cross-site
     });
     return c.json(
       { user: { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status } },
@@ -205,7 +213,7 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
       return bad(401, "Invalid email or password");
     }
     setCookie(c, SESSION_COOKIE, await issueSession(user.id), {
-      httpOnly: true, sameSite: "Lax", path: "/", maxAge: SESSION_TTL_MS / 1000,
+      httpOnly: true, sameSite: "None", path: "/", maxAge: SESSION_TTL_MS / 1000,
       secure: true,
     });
     return c.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, status: user.status } });
@@ -404,9 +412,10 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
 }
 
 export interface WorkerEnv {
-  DATABASE_URL: string;
+  DATABASE_URL?: string;
   AUTH_SECRET: string;
   CORS_ORIGIN: string;
+  HYPERDRIVE?: { connectionString: string };
   REALTIME_HUB: DONs;
   JOIN_LIMITER: DONs;
 }
@@ -418,7 +427,13 @@ export default {
     g.process = g.process ?? ({ env: {} } as never);
     Object.assign(g.process.env ?? {}, {
       NODE_ENV: "production",
-      DATABASE_URL: envVars.DATABASE_URL,
+      // Hyperdrive terminates Postgres locally for the Worker — no TLS upgrade,
+      // no CA store issues. Falls back to the raw pooler secret if unbound.
+      DATABASE_URL:
+        envVars.HYPERDRIVE?.connectionString ??
+        envVars.DATABASE_URL ??
+        "",
+      DB_VIA_HYPERDRIVE: envVars.HYPERDRIVE ? "1" : "0",
       AUTH_SECRET: envVars.AUTH_SECRET,
       CORS_ORIGIN: envVars.CORS_ORIGIN,
     });

@@ -16,6 +16,12 @@
       "new_sqlite_classes": ["RealtimeHub", "JoinRateLimiter"]
     }
   ],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "1e875463fda94029881e28ec8f1ed25c"
+    }
+  ],
   "vars": {
     "NODE_ENV": "production",
     "CORS_ORIGIN": "https://colosseum-web.dearspj.workers.dev"

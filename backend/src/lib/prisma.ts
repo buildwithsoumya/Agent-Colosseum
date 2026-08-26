@@ -23,7 +23,13 @@ function createClient(): PrismaClient {
       log: isProd ? ["error", "warn"] : ["error", "warn", "info"],
     });
   }
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL, max: 3 } as never);
+  const adapter = new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    max: 3,
+    // Supabase pooler presents a certificate chain Node/Workers cannot verify
+    // against the default CA bundle — require TLS without CA verification.
+    ssl: { rejectUnauthorized: false },
+  } as never);
   return new PrismaClient({ adapter } as never);
 }
 
