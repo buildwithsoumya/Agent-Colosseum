@@ -151,6 +151,7 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
       return;
     }
     await next();
+    c.header("Cache-Control", "no-store"); // API state must never be cached by browsers/CDN
     if (origin && allowedOrigins.includes(origin)) {
       c.header("Access-Control-Allow-Origin", origin);
       c.header("Access-Control-Allow-Credentials", "true");
