@@ -13,8 +13,7 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import type { DurableObjectNamespace as DONs, WorkerWebSocket, WebSocketPair } from "./types/cf.js";
 import { configureWorkerBus } from "./lib/runtime.js";
 import { configureRateLimitDo } from "./lib/ratelimit.js";
-import { prisma as db } from "./lib/prisma.js";
-const getPrisma = async () => Promise.resolve(db);
+
 
 interface AuthUser {
   id: string;
@@ -30,9 +29,15 @@ interface TeamMembershipInfo {
 const SESSION_COOKIE = "ac_session";
 const SESSION_TTL_MS = 24 * 3600_000;
 
+/** Prisma client (lazy so bindings land in process.env first). */
+async function db() {
+  const mod = await import("./lib/prisma.js");
+  return mod.prisma;
+}
+
 type Tx = import("@prisma/client").Prisma.TransactionClient;
 async function tx<T>(fn: (t: Tx) => Promise<T>): Promise<T> {
-  return (db.$transaction(fn) as unknown as Promise<T>);
+  return ((await db()).$transaction(fn) as unknown as Promise<T>);
 }
 
 /* ------------------------------------------------------- Durable Objects */
@@ -101,7 +106,7 @@ const bad = (status: number, error: string) => Response.json({ error }, { status
 
 async function resolveSession(token?: string) {
   if (!token) return null;
-  const prisma = await getPrisma();
+  const prisma = await db();
   const { sha256 } = await import("./lib/rng.js");
   const session = await prisma.session.findUnique({ where: { tokenHash: sha256(token) }, include: { user: true } });
   if (!session || session.expiresAt < new Date() || session.user.status !== "ACTIVE") return null;
@@ -113,7 +118,7 @@ async function resolveSession(token?: string) {
 }
 
 async function issueSession(userId: string): Promise<string> {
-  const prisma = await getPrisma();
+  const prisma = await db();
   const { randomToken, sha256 } = await import("./lib/rng.js");
   const token = randomToken();
   await prisma.session.create({
@@ -172,7 +177,7 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
     if (name.length < 2 || !emailAddr.includes("@") || password.length < 8) {
       return bad(400, "Validation failed");
     }
-    const prisma = await getPrisma();
+    const prisma = await db();
     if (await prisma.user.findUnique({ where: { email: emailAddr } })) {
       return bad(400, "An account with that email already exists");
     }
@@ -192,7 +197,7 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
   app.post("/api/auth/login", async (c) => {
     const bcrypt = (await import("bcryptjs")).default;
     const body = (await c.req.json().catch(() => ({}))) as { email?: string; password?: string };
-    const prisma = await getPrisma();
+    const prisma = await db();
     const user = await prisma.user.findUnique({
       where: { email: String(body.email ?? "").toLowerCase().trim() },
     });
@@ -209,7 +214,7 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
   app.post("/api/auth/logout", async (c) => {
     const token = getCookie(c, SESSION_COOKIE);
     if (token) {
-      const prisma = await getPrisma();
+      const prisma = await db();
       const { sha256 } = await import("./lib/rng.js");
       await prisma.session.deleteMany({ where: { tokenHash: sha256(token) } });
     }
@@ -220,7 +225,7 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
   app.get("/api/auth/me", async (c) => {
     const user = me(c);
     if (!user) return bad(401, "Authentication required");
-    const prisma = await getPrisma();
+    const prisma = await db();
     const membership = await prisma.teamMember.findUnique({
       where: { userId: user.id },
       include: { team: { select: { id: true, name: true } } },
@@ -236,7 +241,7 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
   /* ---- public reads ---- */
   app.get("/api/event/state", async (c) => {
     const engine = await import("./services/eventEngine.js");
-    const prisma = await getPrisma();
+    const prisma = await db();
     const snap = await engine.snapshot();
     const [announcements, activity, teamsCount, submissionsCount] = await Promise.all([
       prisma.announcement.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
@@ -248,7 +253,7 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
   });
 
   app.get("/api/event/activity", async (c) => {
-    const prisma = await getPrisma();
+    const prisma = await db();
     return c.json({
       activity: await prisma.activityEvent.findMany({ orderBy: { createdAt: "desc" }, take: 30 }),
     });
@@ -260,7 +265,7 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
   });
 
   app.get("/api/tracks", async (c) => {
-    const prisma = await getPrisma();
+    const prisma = await db();
     return c.json({
       tracks: await prisma.track.findMany({
         where: { active: true },
@@ -279,7 +284,7 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
   app.post("/api/teams", async (c) => {
     const user = me(c);
     if (!user) return bad(401, "Auth required");
-    const prisma = await getPrisma();
+    const prisma = await db();
     if (await prisma.teamMember.findUnique({ where: { userId: user.id } })) {
       return bad(409, "You're already a member of a team.");
     }
@@ -306,7 +311,7 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
     const count = Number(await (await limiterStub.fetch(`https://limiter/count?userId=${user.id}`)).text());
     if (count >= 10) return bad(422, "Too many failed attempts. Try again in a few minutes.");
 
-    const prisma = await getPrisma();
+    const prisma = await db();
     const engine = await import("./services/eventEngine.js");
     const snap = await engine.snapshot();
     if (!snap.gates.teamJoinOpen) return bad(422, "Team registration is closed for this event.");
@@ -354,7 +359,7 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
     if (!user) return bad(401, "Authentication required");
     const membership = membershipOf(c);
     if (!membership) return bad(401, "You are not in a team yet");
-    const prisma = await getPrisma();
+    const prisma = await db();
     const teamsSvc = await import("./services/teams.js");
     const engine = await import("./services/eventEngine.js");
     const [team, cfg] = await Promise.all([
@@ -379,7 +384,7 @@ export function createWorkerApp(hubNs: DONs, limiterNs: DONs) {
     const membership = membershipOf(c);
     if (!user || !membership) return bad(401, "Authentication required");
     if (membership.teamRole !== "CAPTAIN") return bad(403, "Only the team captain can regenerate the join code.");
-    const prisma = await getPrisma();
+    const prisma = await db();
     const teamsSvc = await import("./services/teams.js");
     const raw = await tx((tx) => teamsSvc.regenerateJoinCode(tx, membership.teamId));
     return c.json({ joinCode: raw.joinCode });
@@ -407,10 +412,17 @@ export interface WorkerEnv {
 }
 
 export default {
-  async fetch(request: Request, envVars: WorkerEnv): Promise<Response> {
-    process.env.DATABASE_URL = envVars.DATABASE_URL;
-    process.env.AUTH_SECRET = envVars.AUTH_SECRET;
-    process.env.CORS_ORIGIN = envVars.CORS_ORIGIN;
+  async fetch(request: Request, envVars: WorkerEnv, ctx: { waitUntil(p: Promise<unknown>): void }): Promise<Response> {
+    // Bindings must be visible before any service module initialises.
+    const g = globalThis as { process?: { env?: Record<string, string | undefined> } };
+    g.process = g.process ?? ({ env: {} } as never);
+    Object.assign(g.process.env ?? {}, {
+      NODE_ENV: "production",
+      DATABASE_URL: envVars.DATABASE_URL,
+      AUTH_SECRET: envVars.AUTH_SECRET,
+      CORS_ORIGIN: envVars.CORS_ORIGIN,
+    });
+
     const app = createWorkerApp(envVars.REALTIME_HUB, envVars.JOIN_LIMITER);
     return app.fetch(request);
   },

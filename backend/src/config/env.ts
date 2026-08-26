@@ -41,6 +41,8 @@ const EnvSchema = z.object({
   EVALUATOR_QUEUE_NAME: z.string().default("gauntlet"),
 });
 
+import { onWorkers } from "../types/cf.js";
+
 const testDefaults = {
   DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder",
   AUTH_SECRET: "test-only-secret-not-used-for-real-sessions",
