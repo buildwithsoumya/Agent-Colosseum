@@ -8,7 +8,10 @@
     "start": "next start -p 3000",
     "lint": "next lint --max-warnings=0 || tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"e2e covered by playwright at repo root\""
+    "test": "echo \"e2e covered by playwright at repo root\"",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@ac/shared": "workspace:*",

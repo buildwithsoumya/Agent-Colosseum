@@ -3,7 +3,8 @@ import type { Event as EventModel } from "@prisma/client";
 import { GameConfigSchema } from "@ac/shared";
 import { badRequest, conflict } from "../lib/errors.js";
 import { prisma } from "../lib/prisma.js";
-import { publish } from "../realtime/gateway.js";
+import { emit as publish } from "../lib/runtime.js";
+import { onWorkers } from "../types/cf.js";
 import { logAdminAction } from "./audit.js";
 import { recordActivity } from "./activity.js";
 import { applyLedgerEntry } from "./credits.js";
@@ -67,8 +68,20 @@ export function computeGates(phase: Phase, config?: GameConfig): Gates {
 }
 
 export async function snapshot(): Promise<PhaseSnapshot> {
-  const event = await getEvent();
-  return { ...rowToSnapshot(event), gates: computeGates(event.currentPhase) };
+  let event = await getEvent();
+  // Workers have no background heartbeat — advance lazily when a request lands.
+  if (onWorkers() && event.status === "RUNNING" && event.phaseEndsAt && event.phaseEndsAt <= new Date()) {
+    const idx = PHASE_ORDER.indexOf(event.currentPhase);
+    if (idx < PHASE_ORDER.length - 1) {
+      event = await getEvent(); // refresh
+      await advancePhase(undefined, true);
+      event = await getEvent();
+    } else {
+      await prisma.event.update({ where: { id: event.id }, data: { status: "ENDED" } });
+      event = await getEvent();
+    }
+  }
+  return { ...rowToSnapshot(event), gates: computeGates(event.currentPhase, eventConfig(event)) };
 }
 
 function rowToSnapshot(event: EventRow): Omit<PhaseSnapshot, "gates"> {
@@ -260,6 +273,7 @@ export function timerPayload(snap: PhaseSnapshot): TimerPayload {
 let heartbeat: NodeJS.Timeout | null = null;
 export function startHeartbeat(): void {
   if (heartbeat) return;
+  if (onWorkers()) return; // Workers advance phases lazily inside snapshot()
   let advancing = false;
   heartbeat = setInterval(() => {
     void (async () => {

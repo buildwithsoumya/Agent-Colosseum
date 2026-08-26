@@ -22,7 +22,7 @@ interface Entry {
 export default function PublicLeaderboardPage() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [live, setLive] = useState(false);
-  const { on, socket } = useRealtime();
+  const { on, connected } = useRealtime();
 
   useEffect(() => {
     api
@@ -32,17 +32,17 @@ export default function PublicLeaderboardPage() {
   }, []);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!connected) return;
     const handler = (payload: unknown) => {
       const data = payload as { entries: Entry[] };
       if (Array.isArray(data?.entries)) setEntries(data.entries);
     };
     return on("leaderboard:updated", handler);
-  }, [socket, on]);
+  }, [connected, on]);
 
   useEffect(() => {
-    if (socket) setLive(true);
-  }, [socket]);
+    if (connected) setLive(true);
+  }, [connected]);
 
   return (
     <div className="min-h-screen tech-grid-fine">

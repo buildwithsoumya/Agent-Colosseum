@@ -1,0 +1,4 @@
+DATABASE_URL=postgresql://postgres.gxsqeeanygrxldabhnze:REPLACE_ME@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require
+AUTH_SECRET=replace-with-openssl-rand-hex-48
+CORS_ORIGIN=http://localhost:3000
+GAUNTLET_PAYLOAD_COUNT=10

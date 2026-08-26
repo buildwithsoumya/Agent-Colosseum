@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { SocketEvent } from "@ac/shared";
 import { conflict, forbidden, notFound, unprocessable } from "../lib/errors.js";
 import { prisma } from "../lib/prisma.js";
-import { redis } from "../lib/redis.js";
+import { joinAttempts } from "../lib/ratelimit.js";
 import { loadMembership, requireTeam } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { actionLimiter } from "../middleware/rateLimit.js";
@@ -17,7 +17,7 @@ import {
   regenerateJoinCode,
   teamView,
 } from "../services/teams.js";
-import { publish } from "../realtime/gateway.js";
+import { emit as publish } from "../lib/runtime.js";
 import { recordActivity } from "../services/activity.js";
 
 export const teamsRouter = Router();
@@ -49,14 +49,6 @@ teamsRouter.post(
 /* -------------------------------------------------------------------- join */
 
 const JOIN_FAIL_LIMIT = 10;
-const JOIN_FAIL_WINDOW_SEC = 600;
-
-async function registerJoinFailure(userId: string): Promise<number> {
-  const key = `joinfail:${userId}`;
-  const count = await redis.incr(key);
-  if (count === 1) await redis.expire(key, JOIN_FAIL_WINDOW_SEC);
-  return count;
-}
 
 teamsRouter.post(
   "/join",
@@ -67,8 +59,7 @@ teamsRouter.post(
     const userId = req.user.id;
 
     // brute-force resistance per account
-    const attempts = await redis.get(`joinfail:${userId}`);
-    if (attempts && Number(attempts) >= JOIN_FAIL_LIMIT) {
+    if ((await joinAttempts.count(userId)) >= JOIN_FAIL_LIMIT) {
       throw unprocessable("Too many failed attempts. Try again in a few minutes.");
     }
 
@@ -87,14 +78,13 @@ teamsRouter.post(
         joinByCode(tx, userId, (req.body as { joinCode: string }).joinCode, config.maxTeamSize),
       );
     } catch (err) {
-      // every failed attempt counts toward the brute-force budget
-      const failures = await registerJoinFailure(userId);
-      if (failures >= JOIN_FAIL_LIMIT) {
+      await joinAttempts.increment(userId);
+      if ((await joinAttempts.count(userId)) >= JOIN_FAIL_LIMIT) {
         throw unprocessable("Too many failed attempts. Try again in a few minutes.");
       }
       throw err;
     }
-    await redis.del(`joinfail:${userId}`);
+    await joinAttempts.clear(userId);
 
     const memberCount = await prisma.teamMember.count({ where: { teamId: joined.teamId } });
     publish(SocketEvent.TeamMemberJoined, {

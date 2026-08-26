@@ -29,7 +29,7 @@ export default function SpectatorPage() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
   const [announcement, setAnnouncement] = useState<{ message: string; level: string } | null>(null);
-  const { eventState, on, socket } = useRealtime();
+  const { eventState, on, connected } = useRealtime();
   const countdown = useCountdown();
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function SpectatorPage() {
   }, []);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!connected) return;
     const un1 = on("leaderboard:updated", (payload) => {
       const d = payload as { entries: Entry[] };
       if (Array.isArray(d?.entries)) setEntries(d.entries);
@@ -56,7 +56,7 @@ export default function SpectatorPage() {
       un2();
       un3();
     };
-  }, [socket, on]);
+  }, [connected, on]);
 
   const phaseLabel = eventState ? `${eventState.phase.replace("PHASE_", "PHASE ")} · ${eventState.phaseLabel}` : "CONNECTING…";
 

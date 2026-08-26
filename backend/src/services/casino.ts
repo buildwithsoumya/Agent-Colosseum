@@ -5,7 +5,7 @@ import { secureRandomFloat } from "../lib/rng.js";
 import { announceBalance, applyLedgerEntry, inCreditTransaction } from "./credits.js";
 import { computeGates, eventConfig, getEvent } from "./eventEngine.js";
 import { recordActivity } from "./activity.js";
-import { publish } from "../realtime/gateway.js";
+import { emit as publish } from "../lib/runtime.js";
 
 /**
  * Casino Royale — every outcome is decided here on the server.

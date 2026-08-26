@@ -1,8 +1,15 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { io, type Socket } from "socket.io-client";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { API_URL } from "./api";
+
+/**
+ * Realtime client.
+ * - Cloudflare Workers backend: native WebSocket to /ws carrying {event, payload} frames.
+ * - Node/docker backend (dev): Socket.IO fallback over the same subscription API.
+ *
+ * Pages only ever use `on()` / state — the transport is abstracted here.
+ */
 
 interface EventState {
   phase: string;
@@ -24,84 +31,142 @@ interface TimerState {
 }
 
 interface RealtimeValue {
-  socket: Socket | null;
   eventState: EventState | null;
   timer: TimerState | null;
+  /** true once the realtime transport has opened at least once */
+  connected: boolean;
   refreshEventState: () => Promise<void>;
-  /** subscribe to a socket event; returns unsubscribe */
   on: (event: string, handler: (payload: unknown) => void) => () => void;
 }
 
 const Ctx = createContext<RealtimeValue>({
-  socket: null,
   eventState: null,
   timer: null,
+  connected: false,
   refreshEventState: async () => {},
   on: () => () => {},
 });
 
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [eventState, setEventState] = useState<EventState | null>(null);
   const [timer, setTimer] = useState<TimerState | null>(null);
+  const [connected, setConnected] = useState(false);
+
+  const handlers = useRef(new Map<string, Set<(payload: unknown) => void>>());
+  const socketRef = useRef<{ close(): void } | null>(null);
+
+  const dispatch = useCallback((event: string, payload: unknown) => {
+    if (event === "phase:changed") setEventState(payload as EventState);
+    if (event === "timer:updated") setTimer(payload as TimerState);
+    handlers.current.get(event)?.forEach((h) => h(payload));
+  }, []);
 
   const refreshEventState = useCallback(async () => {
     try {
       const res = await fetch(`${API_URL}/api/event/state`, { credentials: "include" });
-      if (res.ok) {
-        const data = (await res.json()) as EventState & Record<string, unknown>;
-        const { announcements, activity, stats, ...state } = data as never as {
-          announcements?: unknown; activity?: unknown; stats?: unknown;
-        } & EventState;
-        void announcements; void activity; void stats;
-        setEventState(state);
-      }
+      if (res.ok) setEventState((await res.json()) as EventState);
     } catch {
-      /* backend offline — UI shows waiting state */
+      /* backend offline */
     }
   }, []);
 
   useEffect(() => {
     void refreshEventState();
-    const s = io(API_URL, { withCredentials: true, transports: ["websocket", "polling"] });
-    setSocket(s);
 
-    s.on("phase:changed", (payload) => {
-      setEventState(payload as EventState);
-      setTimer({
-        phase: (payload as EventState).phase,
-        secondsRemaining: (payload as EventState).secondsRemaining,
-        endsAt: (payload as EventState).phaseEndsAt,
-        paused: (payload as EventState).status === "PAUSED",
-        serverTime: (payload as EventState).serverTime,
+    let cleanup = (): void => {};
+    let cancelled = false;
+
+    const useWs = API_URL.includes("workers.dev") || API_URL.includes("/ws");
+
+    if (useWs) {
+      // ---- Workers transport: native WebSocket with backoff reconnect ----
+      const wsUrl = `${API_URL.replace(/^http/, "ws").replace(/\/$/, "")}/ws`;
+      let ws: WebSocket | null = null;
+      let retry = 0;
+      let closed = false;
+
+      const connect = (): void => {
+        if (cancelled) return;
+        ws = new WebSocket(wsUrl);
+        socketRef.current = ws;
+        ws.onmessage = (msg) => {
+          try {
+            const frame = JSON.parse(msg.data as string) as { event: string; payload: unknown };
+            dispatch(frame.event, frame.payload);
+          } catch {}
+        };
+        ws.onopen = () => {
+          retry = 0;
+          setConnected(true);
+        };
+        ws.onclose = () => {
+          setConnected(false);
+          if (!closed && retry < 10) {
+            retry++;
+            setTimeout(connect, Math.min(8000, 400 * 2 ** retry));
+          }
+        };
+      };
+      connect();
+
+      cleanup = () => {
+        closed = true;
+        ws?.close();
+        socketRef.current = null;
+      };
+    } else {
+      // ---- Node/dev transport: Socket.IO ----
+      void import("socket.io-client").then(({ io }) => {
+        if (cancelled) return;
+        const s = io(API_URL, { withCredentials: true, transports: ["websocket", "polling"] });
+        socketRef.current = s;
+        s.on("connect", () => setConnected(true));
+        s.on("disconnect", () => setConnected(false));
+        s.onAny((event: string, payload: unknown) => dispatch(event, payload));
+        cleanup = () => {
+          s.disconnect();
+          socketRef.current = null;
+        };
       });
-    });
-    s.on("timer:updated", (payload) => setTimer(payload as TimerState));
+    }
 
     return () => {
-      s.disconnect();
+      cancelled = true;
+      cleanup();
     };
-  }, [refreshEventState]);
+  }, [dispatch, refreshEventState]);
+
+  const on = useCallback((event: string, handler: (payload: unknown) => void) => {
+    let set = handlers.current.get(event);
+    if (!set) {
+      set = new Set();
+      handlers.current.set(event, set);
+    }
+    set.add(handler);
+    return () => {
+      set?.delete(handler);
+    };
+  }, []);
 
   const value = useMemo<RealtimeValue>(
     () => ({
-      socket,
       eventState,
-      timer: timer ?? (eventState ? {
-        phase: eventState.phase,
-        secondsRemaining: eventState.secondsRemaining,
-        endsAt: eventState.phaseEndsAt,
-        paused: eventState.status === "PAUSED",
-        serverTime: eventState.serverTime,
-      } : null),
+      connected,
+      timer:
+        timer ??
+        (eventState
+          ? {
+              phase: eventState.phase,
+              secondsRemaining: eventState.secondsRemaining,
+              endsAt: eventState.phaseEndsAt,
+              paused: eventState.status === "PAUSED",
+              serverTime: eventState.serverTime,
+            }
+          : null),
       refreshEventState,
-      on: (event, handler) => {
-        if (!socket) return () => {};
-        socket.on(event, handler);
-        return () => socket.off(event, handler);
-      },
+      on,
     }),
-    [socket, eventState, timer, refreshEventState],
+    [eventState, connected, timer, refreshEventState, on],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -120,15 +185,9 @@ export function useCountdown(): { label: string; seconds: number } {
 
   if (!timer?.endsAt || timer.paused) return { label: timer?.paused ? "PAUSED" : "--:--", seconds: -1 };
   const endMs = new Date(timer.endsAt).getTime();
-  return { label: format(endMs - now), seconds: Math.floor((endMs - now) / 1000) };
-}
-
-function format(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  const mm = String(m).padStart(2, "0");
-  const ss = String(sec).padStart(2, "0");
-  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  const diff = endMs - now;
+  const s = Math.max(0, Math.floor(diff / 1000));
+  const mm = String(Math.floor(s / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return { label: `${mm}:${ss}`, seconds: s };
 }

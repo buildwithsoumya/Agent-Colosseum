@@ -1,6 +1,6 @@
 import { SocketEvent } from "@ac/shared";
 import { prisma } from "../lib/prisma.js";
-import { publish } from "../realtime/gateway.js";
+import { emit as publish } from "../lib/runtime.js";
 import type { ScoreBreakdown } from "./scoring.js";
 
 /** Persists a team's score and recomputes the full leaderboard ranking. */

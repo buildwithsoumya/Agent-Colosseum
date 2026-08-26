@@ -8,8 +8,10 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.2",
     "@playwright/test": "^1.49.1",
-    "concurrently": "^9.1.0"
+    "concurrently": "^9.1.0",
+    "wrangler": "^4.126.0"
   },
   "scripts": {
     "dev": "concurrently -n backend,frontend -c blue,magenta \"pnpm --filter @ac/backend dev\" \"pnpm --filter @ac/frontend dev\"",
@@ -28,6 +30,8 @@
     "infra:up": "docker compose up -d postgres redis",
     "infra:down": "docker compose down",
     "postinstall": "pnpm --filter @ac/shared build && pnpm --filter @ac/backend db:generate",
-    "stop": "node scripts/stop-dev.mjs"
+    "stop": "node scripts/stop-dev.mjs",
+    "cf:login": "wrangler login",
+    "cf:backend": "pnpm --filter @ac/backend cf:deploy"
   }
 }

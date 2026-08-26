@@ -3,7 +3,7 @@ import { Prisma, type CreditTransactionType } from "@prisma/client";
 import { SocketEvent } from "@ac/shared";
 import { badRequest } from "../lib/errors.js";
 import { prisma } from "../lib/prisma.js";
-import { publish } from "../realtime/gateway.js";
+import { emit as publish } from "../lib/runtime.js";
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 

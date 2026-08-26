@@ -10,7 +10,7 @@ import { actionLimiter } from "../middleware/rateLimit.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { eventConfig, getEvent, snapshot } from "../services/eventEngine.js";
 import { announceBalance, applyLedgerEntry, inCreditTransaction } from "../services/credits.js";
-import { publish } from "../realtime/gateway.js";
+import { emit as publish } from "../lib/runtime.js";
 import { recordActivity } from "../services/activity.js";
 
 export const arenaRouter = Router();

@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "colosseum-api",
+  "main": "dist/src/worker.js",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      { "name": "REALTIME_HUB", "class_name": "RealtimeHub" },
+      { "name": "JOIN_LIMITER", "class_name": "JoinRateLimiter" }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RealtimeHub", "JoinRateLimiter"]
+    }
+  ],
+  "vars": {
+    "CORS_ORIGIN": "http://localhost:3000"
+  },
+  "observability": { "enabled": true }
+}

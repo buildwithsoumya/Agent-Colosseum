@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { SocketEvent } from "@ac/shared";
 import { prisma } from "../lib/prisma.js";
-import { publish } from "../realtime/gateway.js";
+import { emit as publish } from "../lib/runtime.js";
 
 /**
  * Records a notable happening for the spectator main-stage feed and pushes it live.

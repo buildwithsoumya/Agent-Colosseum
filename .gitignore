@@ -35,3 +35,8 @@ blob-report/
 # playwright local artifacts
 test-results/
 playwright-report/
+
+# wrangler local secrets
+.dev.vars
+.wrangler/
+.open-next/

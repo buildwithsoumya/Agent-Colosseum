@@ -1,8 +1,9 @@
 import { SocketEvent } from "@ac/shared";
 import { conflict, unprocessable } from "../lib/errors.js";
+import { onWorkers } from "../types/cf.js";
 import { prisma } from "../lib/prisma.js";
 import { gauntletQueue } from "../lib/queue.js";
-import { publish } from "../realtime/gateway.js";
+import { emit as publish } from "../lib/runtime.js";
 import { recordActivity } from "./activity.js";
 import { computeGates, eventConfig, getEvent } from "./eventEngine.js";
 import { persistScore } from "./leaderboard.js";
@@ -32,11 +33,32 @@ export async function lockSubmissionAndEnqueue(teamId: string) {
   });
   await prisma.evaluationJob.update({ where: { id: job.id }, data: { status: "PROCESSING", startedAt: new Date() } });
 
-  await gauntletQueue().add(
-    "evaluate",
-    { jobId: job.id, submissionId: submission.id, teamId },
-    { jobId: job.id, attempts: 2, backoff: { type: "fixed", delay: 2000 }, removeOnComplete: 50 },
-  );
+  if (onWorkers()) {
+    // Cloudflare: no BullMQ — run the simulated evaluation in this request's context.
+    // The route registers the promise with waitUntil so it survives the response.
+    const { runEvaluation } = await import("./evaluation-core.js");
+    void (async () => {
+      try {
+        await runEvaluation(
+          job.id,
+          (event: string, payload: unknown) => {
+            void publish(event, payload);
+          },
+        );
+      } catch (err) {
+        await prisma.evaluationJob.update({
+          where: { id: job.id },
+          data: { status: "FAILED", error: String(err), finishedAt: new Date() },
+        }).catch(() => {});
+      }
+    })();
+  } else {
+    await gauntletQueue().add(
+      "evaluate",
+      { jobId: job.id, submissionId: submission.id, teamId },
+      { jobId: job.id, attempts: 2, backoff: { type: "fixed", delay: 2000 }, removeOnComplete: 50 },
+    );
+  }
 
   publish(SocketEvent.SubmissionUpdated, { teamId, status: "EVALUATING" }, `team:${teamId}`);
   publish(SocketEvent.SubmissionUpdated, { teamId, status: "EVALUATING" });

@@ -3,7 +3,8 @@ import { createApp } from "./app.js";
 import { env, isProd } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { prisma } from "./lib/prisma.js";
-import { initGateway } from "./realtime/gateway.js";
+import { initGateway, publish } from "./realtime/gateway.js";
+import { registerNodePublisher } from "./lib/runtime.js";
 import { startHeartbeat, snapshot } from "./services/eventEngine.js";
 import { finalizeEvaluation } from "./services/gauntlet.js";
 import { redisSubscriber } from "./lib/redis.js";
@@ -13,6 +14,7 @@ async function main(): Promise<void> {
   const app = createApp();
   const server = http.createServer(app);
   initGateway(server);
+  registerNodePublisher(publish as (event: string, payload: unknown, room?: string) => void);
 
   // internal channel: evaluator → backend (score finalisation stays in the backend)
   await redisSubscriber.subscribe("internal");
