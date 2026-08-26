@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,8 +25,7 @@ interface TeamOption {
 }
 
 export default function AdminUsersPage() {
-  const { user, loading, logout } = useSession();
-  const router = useRouter();
+  const { user } = useSession();
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [teams, setTeams] = useState<TeamOption[]>([]);
@@ -60,12 +57,6 @@ export default function AdminUsersPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    if (loading) return;
-    if (!user) router.replace("/login");
-    else if (user.role !== "ADMIN") router.replace(user.role === "MENTOR" ? "/mentor" : "/app");
-  }, [user, loading, router]);
 
   async function act<T = unknown>(path: string, body?: unknown): Promise<T | null> {
     setError(null);
@@ -123,50 +114,8 @@ export default function AdminUsersPage() {
     }
   }
 
-  if (loading || !user || user.role !== "ADMIN") {
-    return (
-      <div className="grid min-h-screen place-items-center tech-grid">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-soft">
-          <span className="mr-2 text-accent">&gt;</span> Checking credentials…
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen tech-grid">
-      <header className="sticky top-0 z-40 border-b border-line bg-void/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 max-w-[1280px] items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2.5">
-              <span className="grid h-7 w-7 place-items-center border border-accent/40 bg-module font-mono text-[12px] font-bold text-accent">
-                A
-              </span>
-              <span className="font-display text-sm font-bold tracking-tighter">
-                CONTROL<span className="text-accent">CENTER</span>
-              </span>
-            </Link>
-            <nav className="ml-4 flex items-center gap-1">
-              <Link href="/admin" className="rounded px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-ink-soft transition-colors hover:text-ink">
-                Overview
-              </Link>
-              <Link href="/admin/users" className="rounded bg-accent/15 px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-accent">
-                Users
-              </Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => logout().then(() => router.push("/"))}
-              className="rounded-[0.125rem] border border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-ink-soft transition-colors hover:border-bad hover:text-bad"
-            >
-              Log out
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-[1280px] space-y-5 px-4 py-6 sm:px-6">
+    <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight">User management</h1>
@@ -220,7 +169,7 @@ export default function AdminUsersPage() {
                       <td className="px-4 py-2.5">
                         <div className="flex flex-wrap items-center justify-end gap-1.5">
                           {u.status === "ACTIVE" ? (
-                            <Button size="sm" variant="outline" onClick={() => deactivate(u.id)} disabled={u.id === user.id}>Deactivate</Button>
+                            <Button size="sm" variant="outline" onClick={() => deactivate(u.id)} disabled={u.id === user?.id}>Deactivate</Button>
                           ) : (
                             <Button size="sm" variant="good" onClick={() => activate(u.id)}>Activate</Button>
                           )}
@@ -246,7 +195,6 @@ export default function AdminUsersPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
 
       <Modal open={inviteOpen} onClose={() => setInviteOpen(false)} title="Invite a user">
         {inviteLink ? (

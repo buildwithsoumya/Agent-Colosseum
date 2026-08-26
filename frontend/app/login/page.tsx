@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import type { Role } from "@ac/shared";
 import { useSession } from "@/lib/session";
+import { roleHome } from "@/components/auth/require-role";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionLabel } from "@/components/ui/typography";
@@ -14,9 +16,21 @@ const DEMO_ACCOUNTS = [
   ["Captain", "captain.prime@colosseum.dev"],
 ];
 
-export default function LoginPage() {
+/** Only ever route `next` to a destination the user's role may access. */
+function resolveDestination(role: Role, next: string | null): string {
+  if (next && next.startsWith("/")) {
+    if (role === "ADMIN" && next.startsWith("/admin")) return next;
+    if (role === "MENTOR" && next.startsWith("/mentor")) return next;
+    if (role !== "ADMIN" && role !== "MENTOR" && next.startsWith("/app")) return next;
+  }
+  return roleHome(role);
+}
+
+function LoginPage() {
   const { login, register } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +47,7 @@ export default function LoginPage() {
     try {
       if (mode === "login") {
         const user = await login(email, password);
-        router.push(user.role === "ADMIN" ? "/admin" : user.role === "MENTOR" ? "/mentor" : "/app");
+        router.push(resolveDestination(user.role, next));
       } else {
         if (password !== confirmPassword) {
           setError("Passwords do not match");
@@ -175,5 +189,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPageBoundary() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPage />
+    </Suspense>
   );
 }
