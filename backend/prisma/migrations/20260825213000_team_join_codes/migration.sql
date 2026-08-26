@@ -2,6 +2,9 @@
 -- Existing demo codes remain valid: they are normalized and hashed in-place.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+-- Supabase installs contrib extensions into the "extensions" schema; local Postgres
+-- puts them on "public" — cover both via search_path.
+SET search_path = public, extensions;
 
 ALTER TABLE "Team" ADD COLUMN "joinCodeHash" TEXT;
 ALTER TABLE "Team" ADD COLUMN "joinCodeCipher" TEXT NOT NULL DEFAULT '';
