@@ -33,6 +33,8 @@ export function initGateway(httpServer: HttpServer): Server {
         include: { user: true },
       });
       if (!session || session.expiresAt < new Date()) return next();
+      // Deactivated users are treated as anonymous spectators (no role/team rooms).
+      if (session.user.status === "DEACTIVATED") return next();
       socket.data.user = { id: session.user.id, role: session.user.role };
       const membership = await prisma.teamMember.findUnique({ where: { userId: session.user.id } });
       if (membership) socket.data.teamId = membership.teamId;

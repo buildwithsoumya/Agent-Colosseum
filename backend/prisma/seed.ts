@@ -7,6 +7,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { DEFAULT_GAME_CONFIG, PHASE_META } from "@ac/shared";
+import { encryptJoinCode, generateJoinCode, hashJoinCode } from "../src/lib/team-codes.js";
 
 const prisma = new PrismaClient();
 
@@ -277,7 +278,6 @@ async function main() {
   // ---------------------------------------------------------------- demo teams
   interface TeamSeedSpec {
     name: string;
-    code: string;
     members: [email: string, memberName: string][];
     trackKey?: string;
     ps?: { title: string; body: string; status?: "DRAFT" | "SUBMITTED" | "APPROVED" };
@@ -285,9 +285,12 @@ async function main() {
   const teamSpecs: TeamSeedSpec[] = [
     {
       name: "Gladiator Prime",
-      code: "GLAD01",
       trackKey: "fintech",
-      members: [["captain.prime@colosseum.dev", "Maximus Decimus"], ["mate.prime@colosseum.dev", "Juba of Numidia"]],
+      members: [
+        ["captain.prime@colosseum.dev", "Maximus Decimus"],
+        ["mate.prime@colosseum.dev", "Juba of Numidia"],
+        ["member2.prime@colosseum.dev", "Seneca Prime"],
+      ],
       ps: {
         title: "Real-time ledger reconciliation agent",
         body: "An agent that reconciles two transaction ledgers in real time, flags mismatches above a threshold, and produces an auditable daily delta report.",
@@ -296,7 +299,6 @@ async function main() {
     },
     {
       name: "Null Pointers",
-      code: "NULL02",
       trackKey: "cybersec",
       members: [["captain.null@colosseum.dev", "Ada Lovelace"], ["mate.null@colosseum.dev", "Cliff Stoll"]],
       ps: {
@@ -306,12 +308,10 @@ async function main() {
     },
     {
       name: "The Overclockers",
-      code: "OVER03",
       members: [["captain.over@colosseum.dev", "Howard Wolowitz"]],
     },
     {
       name: "Chaos Bakers",
-      code: "CHAO04",
       trackKey: "logistics",
       members: [["captain.chaos@colosseum.dev", "Rosalind Franklin"], ["mate.chaos@colosseum.dev", "Barbara McClintock"]],
       ps: {
@@ -323,16 +323,24 @@ async function main() {
   ];
 
   for (const spec of teamSpecs) {
-    let team = await prisma.team.findUnique({ where: { code: spec.code } });
+    // idempotent: stable demo names; join codes generated/hashed server-side
+    let team = await prisma.team.findUnique({ where: { name: spec.name } });
     if (!team) {
-      team = await prisma.team.create({ data: { name: spec.name, code: spec.code } });
+      const raw = generateJoinCode();
+      team = await prisma.team.create({
+        data: {
+          name: spec.name,
+          joinCodeHash: hashJoinCode(raw),
+          joinCodeCipher: encryptJoinCode(raw),
+        },
+      });
     }
     for (const [i, [email, name]] of spec.members.entries()) {
       const u = await upsertUser(email, name, "PARTICIPANT");
       const existingMember = await prisma.teamMember.findUnique({ where: { userId: u.id } });
       if (!existingMember) {
         await prisma.teamMember.create({
-          data: { teamId: team!.id, userId: u.id, isCaptain: i === 0 },
+          data: { teamId: team!.id, userId: u.id, teamRole: i === 0 ? "CAPTAIN" : "MEMBER" },
         });
       }
     }

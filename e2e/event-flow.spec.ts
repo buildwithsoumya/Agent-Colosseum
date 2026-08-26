@@ -35,9 +35,12 @@ test.describe("agent colosseum happy path", () => {
     if (page.url().includes("/login")) {
       await page.getByRole("button", { name: "Register" }).click();
       await page.getByPlaceholder("Your name").fill("E2E Captain");
+      await page.getByPlaceholder("Confirm password").fill("password123");
       await page.getByRole("button", { name: /Create account/ }).click();
+      await page.getByRole("button", { name: /Create or join a team/ }).click();
+    } else {
+      await page.waitForURL("**/app/team", { timeout: 20_000 });
     }
-    await page.waitForURL("**/app/team", { timeout: 20_000 });
 
     await page.getByPlaceholder("Team name").fill("E2E Legion");
     await page.getByRole("button", { name: /Create team/ }).click();

@@ -2,8 +2,21 @@ import { z } from "zod";
 
 /* ---------------------------------- roles --------------------------------- */
 
+/** Global application role. Never assigned by public registration. */
 export const Role = z.enum(["ADMIN", "MENTOR", "PARTICIPANT", "SPECTATOR"]);
 export type Role = z.infer<typeof Role>;
+
+/** Roles that are permitted via an admin-issued invitation. ADMIN is never inviteable. */
+export const InvitedRole = z.enum(["MENTOR", "CAPTAIN"]);
+export type InvitedRole = z.infer<typeof InvitedRole>;
+
+/** Team-level role, separate from the user's global application role. */
+export const TeamRole = z.enum(["MEMBER", "CAPTAIN"]);
+export type TeamRole = z.infer<typeof TeamRole>;
+
+/** Whether a user account is usable. Deactivated users cannot authenticate. */
+export const UserStatus = z.enum(["ACTIVE", "DEACTIVATED"]);
+export type UserStatus = z.infer<typeof UserStatus>;
 
 /* ---------------------------------- phases -------------------------------- */
 
@@ -130,6 +143,9 @@ export type CasinoOutcome = z.infer<typeof CasinoOutcome>;
 /** Tunable economy/casino/scoring knobs. PRD values; PRD marks figures as configurable. */
 export const GameConfigSchema = z.object({
   openingBalanceCc: z.number().int().default(1000),
+  maxTeamSize: z.number().int().min(2).max(10).default(4),
+  /** Last phase in which teams may be created/joined (PRD: onboarding). */
+  teamJoinLastPhase: z.enum(["SETUP", "PHASE_0", "PHASE_1", "PHASE_2", "PHASE_3", "PHASE_4"]).default("PHASE_0"),
   taskUnlockCostCc: z.number().int().default(40),
   arenaMaxRunsPerTeam: z.number().int().default(4),
   arenaPayoutCc: z.number().int().default(150),
@@ -151,6 +167,7 @@ export const GameConfigSchema = z.object({
     })
     .default({ accuracy: 0.4, resilience: 0.25, latency: 0.2, tokens: 0.15 }),
 });
+
 export type GameConfig = z.infer<typeof GameConfigSchema>;
 
 export const DEFAULT_GAME_CONFIG: GameConfig = GameConfigSchema.parse({});
@@ -177,6 +194,7 @@ export const SocketEvent = {
   SubmissionUpdated: "submission:updated",
   GauntletProgress: "gauntlet:progress",
   GauntletCompleted: "gauntlet:completed",
+  TeamMemberJoined: "team:member_joined",
   AnnouncementNew: "announcement:new",
   ActivityNew: "activity:new",
 } as const;
@@ -193,12 +211,32 @@ export interface ApiError {
 
 /* -------------------------------- auth payloads ---------------------------- */
 
-export const RegisterInput = z.object({
-  name: z.string().min(2).max(80),
-  email: z.string().email(),
-  password: z.string().min(8).max(128),
-});
+export const RegisterInput = z
+  .object({
+    name: z.string().min(2).max(80),
+    email: z.string().email(),
+    password: z.string().min(8).max(128),
+    confirmPassword: z.string().min(8).max(128).optional(),
+  })
+  .refine((d) => !d.confirmPassword || d.confirmPassword === d.password, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 export type RegisterInput = z.infer<typeof RegisterInput>;
+
+export const InvitationRegisterInput = z
+  .object({
+    name: z.string().min(2).max(80),
+    email: z.string().email(),
+    password: z.string().min(8).max(128),
+    confirmPassword: z.string().min(8).max(128),
+    invitationToken: z.string().min(16),
+  })
+  .refine((d) => d.confirmPassword === d.password, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+export type InvitationRegisterInput = z.infer<typeof InvitationRegisterInput>;
 
 export const LoginInput = z.object({
   email: z.string().email(),
@@ -211,4 +249,5 @@ export interface PublicUser {
   email: string;
   name: string;
   role: Role;
+  status: UserStatus;
 }

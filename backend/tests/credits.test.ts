@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { applyLedgerEntry } from "../src/services/credits.js";
+import { encryptJoinCode, generateJoinCode, hashJoinCode } from "../src/lib/team-codes.js";
 
 /**
  * Ledger invariants against a real database.
@@ -13,8 +14,13 @@ describe.skipIf(!run)("credit ledger", () => {
   let teamId: string;
 
   beforeAll(async () => {
+    const raw = generateJoinCode();
     const team = await prisma.team.create({
-      data: { name: `test-ledger-${Date.now()}`, code: `T${Date.now().toString(36).toUpperCase().slice(-5)}X` },
+      data: {
+        name: `test-ledger-${Date.now()}`,
+        joinCodeHash: hashJoinCode(raw),
+        joinCodeCipher: encryptJoinCode(raw),
+      },
     });
     teamId = team.id;
   });

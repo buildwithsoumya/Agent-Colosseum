@@ -135,7 +135,7 @@ problemsRouter.get(
       },
       orderBy: { updatedAt: "asc" },
       include: {
-        team: { select: { name: true, code: true } },
+        team: { select: { name: true } },
         track: { select: { key: true, name: true } },
       },
     });

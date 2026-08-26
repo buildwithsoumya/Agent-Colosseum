@@ -19,17 +19,30 @@ enum Role {
   SPECTATOR
 }
 
+enum UserStatus {
+  ACTIVE
+  DEACTIVATED
+}
+
+/** Team-level role, separate from the user's global application role. */
+enum TeamRole {
+  MEMBER
+  CAPTAIN
+}
+
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
+  id           String     @id @default(cuid())
+  email        String     @unique
   name         String
   passwordHash String
-  role         Role      @default(PARTICIPANT)
-  trackId      String?   // mentor domain assignment
-  track        Track?    @relation(fields: [trackId], references: [id])
-  createdAt    DateTime  @default(now())
+  role         Role       @default(PARTICIPANT) // global application role
+  status       UserStatus @default(ACTIVE)
+  trackId      String?    // mentor domain assignment
+  track        Track?     @relation(fields: [trackId], references: [id])
+  createdAt    DateTime   @default(now())
   sessions     Session[]
   memberships  TeamMember[]
+  invitations  Invitation[] @relation("InvitationCreatedBy")
 }
 
 model Session {
@@ -46,9 +59,11 @@ model Session {
 // ---------------------------------------------------------------- teams
 
 model Team {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  code          String   @unique // invite code
+  id            String    @id @default(cuid())
+  name          String    @unique
+  joinCodeHash  String    @unique // sha256 of the normalized join code; raw code never stored
+  joinCodeCipher String // AES-encrypted so captains can re-display their code
+  joinCodeUpdatedAt DateTime @default(now())
   trackId       String?
   track         Track?   @relation(fields: [trackId], references: [id])
   creditBalance Int      @default(0) // cache, always written with CreditTransaction inside a DB tx
@@ -65,17 +80,45 @@ model Team {
   submissions       Submission[]
   scores            Score?
   leaderboardEntry  LeaderboardEntry?
+  invitations       Invitation[]
 }
 
 model TeamMember {
   teamId    String
-  team      Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  userId    String  @unique
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isCaptain Boolean @default(false)
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamRole  TeamRole @default(MEMBER)
   joinedAt  DateTime @default(now())
 
   @@id([teamId, userId])
+}
+
+// ------------------------------------------------------------- invitations
+
+enum InvitedRole {
+  MENTOR
+  CAPTAIN
+}
+
+/**
+ * Admin-issued invitation for a privileged role (MENTOR) or a team CAPTAIN.
+ * Only the hashed token is stored; a used/expired invitation is permanently rejected.
+ */
+model Invitation {
+  id          String      @id @default(cuid())
+  tokenHash   String      @unique
+  email       String
+  role        InvitedRole
+  teamId      String?     // required when role = CAPTAIN
+  team        Team?       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdById String?
+  createdBy   User?       @relation("InvitationCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime    @default(now())
+
+  @@index([email])
 }
 
 // ---------------------------------------------------------------- event engine

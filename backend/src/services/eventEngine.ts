@@ -35,6 +35,8 @@ export interface PhaseSnapshot {
 }
 
 export interface Gates {
+  teamCreateOpen: boolean;
+  teamJoinOpen: boolean;
   psApprovalOpen: boolean;
   taskUnlockOpen: boolean;
   storeOpen: boolean;
@@ -47,8 +49,14 @@ export interface Gates {
  * Derived gameplay gates. Single source of truth for "what can teams do now".
  * PRD: store+arena live P1–P2, casino P3 (code paused), submissions P4.
  */
-export function computeGates(phase: Phase): Gates {
+export function computeGates(phase: Phase, config?: GameConfig): Gates {
+  // Team formation runs from SETUP until the configured last phase (PRD: onboarding).
+  const lastTeamPhase = config?.teamJoinLastPhase ?? "PHASE_0";
+  const teamOpen =
+    phase === "PHASE_0" ? true : lastTeamPhase !== "SETUP" && PHASE_ORDER.indexOf(phase) <= PHASE_ORDER.indexOf(lastTeamPhase);
   return {
+    teamCreateOpen: teamOpen,
+    teamJoinOpen: teamOpen,
     psApprovalOpen: phase === "PHASE_0",
     taskUnlockOpen: phase === "PHASE_1",
     storeOpen: phase === "PHASE_1" || phase === "PHASE_2",
